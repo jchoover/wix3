@@ -29,10 +29,13 @@
   <String Id="OverallProgressPackageText">Initializing...</String>
   <String Id="ProgressCancelButton">&amp;Cancel</String>
   <String Id="ModifyHeader">Modify Setup</String>
+  <String Id="ModifyCheckUpdateButton">Check for Updates</String>
+<!--  <String Id="ModifyUpdateButton">Update</String>-->
   <String Id="ModifyRepairButton">&amp;Repair</String>
   <String Id="ModifyUninstallButton">&amp;Uninstall</String>
   <String Id="ModifyCloseButton">&amp;Close</String>
   <String Id="SuccessHeader">Setup Successful</String>
+  <String Id="SuccessUpdateCurrent">There are no updates available.</String>
   <String Id="SuccessLaunchButton">&amp;Launch</String>
   <String Id="SuccessRestartText">You must restart your computer before you can use the software.</String>
   <String Id="SuccessRestartButton">&amp;Restart</String>
@@ -42,4 +45,8 @@
   <String Id="FailureRestartText">You must restart your computer to complete the rollback of the software.</String>
   <String Id="FailureRestartButton">&amp;Restart</String>
   <String Id="FailureCloseButton">&amp;Close</String>
+  <String Id="UpdateReplaceHeader">Update Available</String>
+  <String Id="UpdateReplaceMessage">Version [WixBundleUpdateVersion] of [WixBundleName] is available. Would you like to update now?</String>
+  <String Id="UpdateReplaceUpdateButton">Update</String>
+  <String Id="UpdateReplaceCloseButton">&amp;Close</String>
 </WixLocalization>
