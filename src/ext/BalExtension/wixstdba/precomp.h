@@ -45,6 +45,9 @@
 #include "balinfo.h"
 #include "balcondition.h"
 
+#define E_INVALID_PARAMETER HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER)
+#define E_FILE_NOT_FOUND HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)
+
 HRESULT CreateBootstrapperApplication(
     __in HMODULE hModule,
     __in BOOL fPrereq,

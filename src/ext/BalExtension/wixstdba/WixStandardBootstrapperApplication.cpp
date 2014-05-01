@@ -47,6 +47,7 @@ enum WIXSTDBA_STATE
     WIXSTDBA_STATE_EXECUTED,
     WIXSTDBA_STATE_APPLIED,
     WIXSTDBA_STATE_NO_UPDATES,
+    WIXSTDBA_STATE_OFFLINE,
     WIXSTDBA_STATE_FAILED,
 };
 
@@ -59,6 +60,7 @@ enum WIXSTDBA_UPDATE_STATE
     WIXSTDBA_UPDATE_STATE_AVAILABLE,
     WIXSTDBA_UPDATE_STATE_UPDATING,
     WIXSTDBA_UPDATE_STATE_ERROR,
+    WIXSTDBA_UPDATE_STATE_OFFLINE,
 };
 
 enum WM_WIXSTDBA
@@ -151,6 +153,7 @@ enum WIXSTDBA_CONTROL
 
     // Success page
     WIXSTDBA_CONTROL_SUCCESS_NOUPDATE_TEXT,
+    WIXSTDBA_CONTROL_SUCCESS_OFFLINE_TEXT,
     WIXSTDBA_CONTROL_LAUNCH_BUTTON,
     WIXSTDBA_CONTROL_SUCCESS_RESTART_TEXT,
     WIXSTDBA_CONTROL_SUCCESS_RESTART_BUTTON,
@@ -207,6 +210,7 @@ static THEME_ASSIGN_CONTROL_ID vrgInitControls[] = {
     { WIXSTDBA_CONTROL_PROGRESS_CANCEL_BUTTON, L"ProgressCancelButton" },
 
     { WIXSTDBA_CONTROL_SUCCESS_NOUPDATE_TEXT, L"SuccessUpdateCurrent" },
+    { WIXSTDBA_CONTROL_SUCCESS_OFFLINE_TEXT, L"SuccessUpdateOffline" },
     { WIXSTDBA_CONTROL_LAUNCH_BUTTON, L"LaunchButton" },
     { WIXSTDBA_CONTROL_SUCCESS_RESTART_TEXT, L"SuccessRestartText" },
     { WIXSTDBA_CONTROL_SUCCESS_RESTART_BUTTON, L"SuccessRestartButton" },
@@ -304,11 +308,11 @@ public: // IBootstrapperApplication
 #endif
 
         // Only run the update detection if either the command line switch was passed or if this is the second time we are calling detect (because we are installed and invoked from ARP)
-        if ((BOOTSTRAPPER_ACTION_UPDATE_REPLACE == m_command.action||WIXSTDBA_UPDATE_STATE_POSSIBLE == m_updateState) && (NULL != wzUpdateLocation))
+        if ((BOOTSTRAPPER_ACTION_UPDATE_REPLACE == m_command.action||WIXSTDBA_UPDATE_STATE_POSSIBLE == m_updateState) && (NULL != wzUpdateLocation) && (m_updateState != WIXSTDBA_UPDATE_STATE_OFFLINE))
         {
             nRecommendation = IDOK;
         }
-        if (NULL != wzUpdateLocation)
+        if ((NULL != wzUpdateLocation) && (m_updateState != WIXSTDBA_UPDATE_STATE_OFFLINE))
         {
             m_updateState = WIXSTDBA_UPDATE_STATE_POSSIBLE;
         }
@@ -366,11 +370,20 @@ LExit:
 #ifdef DEBUG
         BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "WIXSTDBA: OnDetectUpdateComplete() - status: 0x%x, update location: %ls", hrStatus, wzUpdateLocation);
 #endif
-        
         if (FAILED(hrStatus))
         {
-            m_updateState = WIXSTDBA_UPDATE_STATE_ERROR;
-            SetState(WIXSTDBA_STATE_DETECTING, hrStatus);        
+            // For offline installs, if the initial detection fails we will get a failed HRESULT here.
+            // If the update button was clicked, we want to fail
+            if (E_FILE_NOT_FOUND == hrStatus && !m_fCheckForUpdateButtonClicked) 
+            {
+                m_updateState = WIXSTDBA_UPDATE_STATE_OFFLINE;
+                //SetState(WIXSTDBA_STATE_CHECKING_UPDATES, S_OK);                
+            }
+            else
+            {
+                m_updateState = WIXSTDBA_UPDATE_STATE_ERROR;
+                SetState(WIXSTDBA_STATE_DETECTING, hrStatus);
+            }
         }
 
         __super::OnDetectUpdateComplete(hrStatus, wzUpdateLocation);
@@ -417,6 +430,10 @@ LExit:
         __in HRESULT hrStatus
         )
     {
+#ifdef DEBUG
+        BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "WIXSTDBA: OnDetectComplete() - status: 0x%x, update state: 0x%x", hrStatus, m_updateState);
+#endif
+
         if (SUCCEEDED(hrStatus) && m_pBAFunction)
         {
             BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Running detect complete BA function");
@@ -442,6 +459,12 @@ LExit:
                 }
             }
         }
+
+        // IF were not passive, and an update is available show the window (if we suppressed showing it in OnDetect)
+        if ((BOOTSTRAPPER_DISPLAY_NONE < m_command.display) && (BOOTSTRAPPER_ACTION_UPDATE_REPLACE == m_command.action) && (WIXSTDBA_UPDATE_STATE_AVAILABLE == m_updateState))
+        {
+            ::ShowWindow(m_pTheme->hwndParent, SW_SHOW);
+        }
         
         switch (m_updateState)
         {
@@ -453,6 +476,28 @@ LExit:
                 break;
             case WIXSTDBA_UPDATE_STATE_CURRENT:
                 SetState(WIXSTDBA_STATE_NO_UPDATES, hrStatus); //WIXSTDBA_STATE_APPLIED
+                break;
+            case WIXSTDBA_UPDATE_STATE_OFFLINE:
+                if (FAILED(hrStatus))
+                {
+                    // The first offline status is still going to return the file not found HRESULT
+                    // So trigger a second detect so we can get a clean detection
+                    //SetState(WIXSTDBA_STATE_CHECKING_UPDATES, S_OK);  
+                    this->OnDetect();
+                } 
+                else 
+                {
+                    // If we failed to get the update, but the HRESULT didn't fail
+                    // either state no updates available if it was from a checkforupdates, 
+                    if(BOOTSTRAPPER_ACTION_UPDATE_REPLACE == m_command.action)
+                    {
+                        SetState(WIXSTDBA_STATE_OFFLINE, hrStatus);
+                    }
+                    else
+                    {
+                        SetState(WIXSTDBA_STATE_DETECTED, hrStatus);
+                    }
+                }
                 break;
             default:
                 SetState(WIXSTDBA_STATE_DETECTED, hrStatus);
@@ -1766,7 +1811,7 @@ private: // privates
 
         // Calculate the window style based on the theme style and command display value.
         dwWindowStyle = m_pTheme->dwStyle;
-        if (BOOTSTRAPPER_DISPLAY_NONE >= m_command.display)
+        if ((BOOTSTRAPPER_DISPLAY_NONE >= m_command.display)||(BOOTSTRAPPER_ACTION_UPDATE_REPLACE == m_command.action))
         {
             dwWindowStyle &= ~WS_VISIBLE;
         }
@@ -2179,7 +2224,7 @@ private: // privates
         SetState(WIXSTDBA_STATE_DETECTING, hr);
 
         // If the UI should be visible, display it now and hide the splash screen
-        if (BOOTSTRAPPER_DISPLAY_NONE < m_command.display)
+        if ((BOOTSTRAPPER_DISPLAY_NONE < m_command.display) && (BOOTSTRAPPER_ACTION_UPDATE_REPLACE != m_command.action))
         {
             ::ShowWindow(m_pTheme->hwndParent, SW_SHOW);
         }
@@ -2311,6 +2356,11 @@ private: // privates
             // Quietly exit.
             ::PostMessageW(m_hWnd, WM_CLOSE, 0, 0);
         }
+        // If we are doing an update check, suppress the UI
+        else if (WIXSTDBA_STATE_OFFLINE == state && !m_fCheckForUpdateButtonClicked) {
+            // Quietly exit.
+            ::PostMessageW(m_hWnd, WM_CLOSE, 0, 0);
+        }
         else // try to change the pages.
         {
             DeterminePageId(stateOld, &dwOldPageId);
@@ -2388,11 +2438,14 @@ private: // privates
                     ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_SUCCESS_RESTART_TEXT, fShowRestartButton);
                     ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_SUCCESS_RESTART_BUTTON, fShowRestartButton);
                     ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_SUCCESS_NOUPDATE_TEXT, WIXSTDBA_STATE_NO_UPDATES == state);
+                    ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_SUCCESS_OFFLINE_TEXT, WIXSTDBA_STATE_OFFLINE == state);                    
 
                     // Only auto close if update requested from the command line
-                    if (WIXSTDBA_STATE_NO_UPDATES == state && !m_fCheckForUpdateButtonClicked)
+                    if ( ((WIXSTDBA_STATE_NO_UPDATES == state) || (WIXSTDBA_STATE_OFFLINE == state)) && !m_fCheckForUpdateButtonClicked)
                     {
-                        ::SetTimer(m_hWnd, WIXSTDBA_TIMER_NO_UPDATES, 1000, NULL);
+                        //::SetTimer(m_hWnd, WIXSTDBA_TIMER_NO_UPDATES, 1000, NULL);
+                        // Quietly exit.
+                        ::PostMessageW(m_hWnd, WM_CLOSE, 0, 0);
                     }
                 }
                 else if (m_rgdwPageIds[WIXSTDBA_PAGE_FAILURE] == dwNewPageId) // on the "Failure" page, show error message and check if the restart button should be enabled.
@@ -2548,7 +2601,11 @@ private: // privates
                     }
                 }
 
-                ThemeShowPage(m_pTheme, dwOldPageId, SW_HIDE);
+                ThemeShowPage(m_pTheme, dwOldPageId, SW_HIDE); 
+
+#ifdef DEBUG
+        BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "WIXSTDBA: OnChangeState(ThemeShowPage) - page: 0x%x", dwNewPageId);
+#endif
                 ThemeShowPage(m_pTheme, dwNewPageId, SW_SHOW);
 
                 // On the install page set the focus to the install button or the next enabled control if install is disabled
@@ -2942,6 +2999,7 @@ private: // privates
 
             case WIXSTDBA_STATE_DETECTED: __fallthrough;			
             case WIXSTDBA_STATE_CHECKING_UPDATES: __fallthrough;
+            case WIXSTDBA_STATE_OFFLINE: __fallthrough;
             case WIXSTDBA_STATE_PLANNING: __fallthrough;
             case WIXSTDBA_STATE_PLANNED: __fallthrough;
             case WIXSTDBA_STATE_APPLYING: __fallthrough;
@@ -3012,6 +3070,7 @@ private: // privates
                 *pdwPageId = m_rgdwPageIds[WIXSTDBA_PAGE_PROGRESS];
                 break;
 
+            case WIXSTDBA_STATE_OFFLINE: __fallthrough;
             case WIXSTDBA_STATE_NO_UPDATES: __fallthrough;
             case WIXSTDBA_STATE_APPLIED:
                 *pdwPageId = m_rgdwPageIds[WIXSTDBA_PAGE_SUCCESS];
@@ -3394,6 +3453,7 @@ HRESULT CreateBootstrapperApplication(
     __out IBootstrapperApplication** ppApplication
     )
 {
+
     HRESULT hr = S_OK;
     CWixStandardBootstrapperApplication* pApplication = NULL;
 
