@@ -74,6 +74,12 @@ struct THEME_ASSIGN_CONTROL_ID
 
 const DWORD THEME_FIRST_ASSIGN_CONTROL_ID = 1024; // Recommended first control id to be assigned.
 
+struct THEME_TEXT_CONTENT
+{
+    LPWSTR sczValue;
+    LPWSTR sczCondition;
+};
+
 struct THEME_CONTROL
 {
     THEME_CONTROL_TYPE type;
@@ -83,6 +89,9 @@ struct THEME_CONTROL
 
     LPWSTR sczName; // optional name for control, only used to apply control id.
     LPWSTR sczText;
+    DWORD cContent;
+    THEME_TEXT_CONTENT *ptcContent;
+    
     int nX;
     int nY;
     int nHeight;

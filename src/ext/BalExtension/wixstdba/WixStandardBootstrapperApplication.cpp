@@ -1065,7 +1065,7 @@ private: // privates
 
         hr = LocProbeForFile(wzModulePath, wzThemeFileName, wzLanguage, &sczThemePath);
         BalExitOnFailure2(hr, "Failed to probe for theme file: %ls in path: %ls", wzThemeFileName, wzModulePath);
-
+        
         hr = ThemeLoadFromFile(sczThemePath, &m_pTheme);
         BalExitOnFailure1(hr, "Failed to load theme from path: %ls", sczThemePath);
 
@@ -2008,13 +2008,43 @@ private: // privates
                             }
                         }
 
-                        // Format the text in each of the new page's controls (if they have any text).
-                        if (pControl->sczText && *pControl->sczText)
+                        // If the control has conditional content, evaluate it here.
+                        if (pControl->cContent)
                         {
-                            HRESULT hr = BalFormatString(pControl->sczText, &sczText);
-                            if (SUCCEEDED(hr))
+                            BOOL fCondition = FALSE;
+
+                            for (DWORD dwIndex = 0; dwIndex < pControl->cContent; ++dwIndex)
                             {
-                                ThemeSetTextControl(m_pTheme, pControl->wId, sczText);
+                                if (pControl->ptcContent[dwIndex].sczCondition && *pControl->ptcContent[dwIndex].sczCondition)
+                                {
+                                    m_pEngine->EvaluateCondition(pControl->ptcContent[dwIndex].sczCondition, &fCondition);
+                                }
+                                else
+                                {
+                                    fCondition = TRUE;
+                                }
+
+                                if(fCondition)
+                                {
+                                    HRESULT hr = BalFormatString(pControl->ptcContent[dwIndex].sczValue, &sczText);
+                                    if (SUCCEEDED(hr))
+                                    {
+                                        ThemeSetTextControl(m_pTheme, pControl->wId, sczText);
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Format the text in each of the new page's controls (if they have any text).
+                            if (pControl->sczText && *pControl->sczText)
+                            {
+                                HRESULT hr = BalFormatString(pControl->sczText, &sczText);
+                                if (SUCCEEDED(hr))
+                                {
+                                    ThemeSetTextControl(m_pTheme, pControl->wId, sczText);
+                                }
                             }
                         }
                     }

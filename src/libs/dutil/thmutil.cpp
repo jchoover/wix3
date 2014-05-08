@@ -119,6 +119,10 @@ static HRESULT ParseTabs(
     __in IXMLDOMNode* pixn,
     __in THEME_CONTROL* pControl
     );
+static HRESULT ParseTextContent(
+    __in IXMLDOMNode* pixn,
+    __in THEME_TEXT_CONTENT* pContent
+    );
 static HRESULT FindImageList(
     __in THEME* pTheme,
     __in_z LPCWSTR wzImageListName,
@@ -185,6 +189,9 @@ static void FreeColumn(
     );
 static void FreeTab(
     __in THEME_TAB* pTab
+    );
+static void FreeTextContent(
+    __in THEME_TEXT_CONTENT* pContent
     );
 static void CALLBACK OnBillboardTimer(
     __in const THEME* pTheme,
@@ -656,8 +663,19 @@ DAPI_(HRESULT) ThemeLocalize(
     {
         THEME_CONTROL* pControl = pTheme->rgControls + i;
 
-        hr = LocLocalizeString(pWixLoc, &pControl->sczText);
-        ExitOnFailure(hr, "Failed to localize control text.");
+        if (0 < pControl->cContent)
+        {
+            for (DWORD j = 0; j < pControl->cContent; ++j)
+            {
+                hr = LocLocalizeString(pWixLoc, &pControl->ptcContent[j].sczValue);
+                ExitOnFailure(hr, "Failed to localize control text.");
+            }
+        }
+        else
+        {
+            hr = LocLocalizeString(pWixLoc, &pControl->sczText);
+            ExitOnFailure(hr, "Failed to localize control text.");
+        }
 
         for (DWORD j = 0; j < pControl->cColumns; ++j)
         {
@@ -2381,6 +2399,10 @@ static HRESULT ParseControl(
     DWORD dwValue = 0;
     BOOL fValue = FALSE;
     BSTR bstrText = NULL;
+    IXMLDOMNodeList *pContentList = NULL;
+    IXMLDOMNode *pContentNode = NULL;
+    long cContent = 0;
+    DWORD iContent = 0;
 
     hr = XmlGetAttributeNumber(pixn, L"id", &dwId);
     if (S_FALSE == hr)
@@ -2583,19 +2605,47 @@ static HRESULT ParseControl(
     {
         pControl->uStringId = UINT_MAX;
 
-        hr = XmlGetText(pixn, &bstrText);
-        ExitOnFailure(hr, "Failed to get control text.");
+        // Parse for Content nodes, if we have them
+        hr = XmlSelectNodes(pixn, L"Content", &pContentList); 
+        ExitOnFailure(hr, "Failed to select Content for control.");
 
         if (S_OK == hr)
         {
-            hr = StrAllocString(&pControl->sczText, bstrText, 0);
-            ExitOnFailure(hr, "Failed to copy control text.");
+            hr = pContentList->get_length(&cContent);
+            ExitOnFailure(hr, "Failed to count the number of Content elements.");
 
-            ReleaseNullBSTR(bstrText);
+            if (cContent != 0)
+            {
+                pControl->cContent = cContent;
+                pControl->ptcContent = static_cast<THEME_TEXT_CONTENT*>(MemAlloc(sizeof(THEME_TEXT_CONTENT) * cContent, TRUE));
+                ExitOnNull(pControl->ptcContent, hr, E_OUTOFMEMORY, "Failed to allocate TextContent pointers.");
+
+                while (S_OK == (hr = XmlNextElement(pContentList, &pContentNode, NULL)))
+                {
+                    hr = ParseTextContent(pContentNode, &pControl->ptcContent[iContent]); 
+                    ExitOnFailure(hr, "Failed to parse Content element.");
+
+                    ++iContent;
+                }
+            }
         }
-        else if (S_FALSE == hr)
+
+        if (0 == pControl->cContent)
         {
-            hr = S_OK;
+            hr = XmlGetText(pixn, &bstrText);
+            ExitOnFailure(hr, "Failed to get control text.");
+
+            if (S_OK == hr)
+            {
+                hr = StrAllocString(&pControl->sczText, bstrText, 0);
+                ExitOnFailure(hr, "Failed to copy control text.");
+
+                ReleaseNullBSTR(bstrText);
+            }
+            else if (S_FALSE == hr)
+            {
+                hr = S_OK;
+            }
         }
     }
 
@@ -2769,6 +2819,7 @@ static HRESULT ParseControl(
 
 LExit:
     ReleaseBSTR(bstrText);
+    ReleaseObject(pContentList);
 
     return hr;
 }
@@ -2943,6 +2994,32 @@ LExit:
 }
 
 
+static HRESULT ParseTextContent(
+    __in IXMLDOMNode* pixn,
+    __in THEME_TEXT_CONTENT* pContent
+    )
+{
+    HRESULT hr = S_OK;
+    BSTR bstrText = NULL;
+
+    hr = XmlGetText(pixn, &bstrText);
+    ExitOnFailure(hr, "Failed to get inner text of content element");
+
+    hr = StrAllocString(&(pContent->sczValue), bstrText, 0);
+    ExitOnFailure(hr, "Failed to copy Content text");
+
+    hr = XmlGetAttributeEx(pixn, L"Condition", &(pContent->sczCondition));
+    if (E_NOTFOUND == hr)
+    {
+        hr = S_OK;
+    }
+    ExitOnFailure(hr, "Failed to get Content condition");
+
+LExit:
+    ReleaseBSTR(bstrText);
+
+    return hr;
+}
 static HRESULT FindImageList(
     __in THEME* pTheme,
     __in_z LPCWSTR wzImageListName,
@@ -3227,6 +3304,11 @@ static void FreeControl(
             ::DeleteBitmap(pControl->hImage);
         }
 
+        for (DWORD i = 0; i < pControl->cContent; ++i)
+        {
+            FreeTextContent(&(pControl->ptcContent[i]));
+        }
+
         for (DWORD i = 0; i < pControl->cBillboards; ++i)
         {
             FreeBillboard(&(pControl->ptbBillboards[i]));
@@ -3242,6 +3324,7 @@ static void FreeControl(
             FreeTab(&(pControl->pttTabs[i]));
         }
 
+        ReleaseMem(pControl->ptcContent);
         ReleaseMem(pControl->ptbBillboards)
         ReleaseMem(pControl->ptcColumns);
         ReleaseMem(pControl->pttTabs);
@@ -3276,7 +3359,13 @@ static void FreeTab(
     ReleaseStr(pTab->pszName);
 }
 
-
+static void FreeTextContent(
+    __in THEME_TEXT_CONTENT* pContent
+    )
+{
+    ReleaseStr(pContent->sczValue);
+    ReleaseStr(pContent->sczCondition);
+}
 static void FreeFont(
     __in THEME_FONT* pFont
     )
