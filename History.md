@@ -1,3 +1,5 @@
+* jchoover: Switch WixBA over to using engine updates. Fixed several small issues with atom feed parsing.
+
 * BobArnson: WIXBUG:4466 - Open icons with read-sharing in DTF.
 
 * BobArnson: WIXBUG:4476 - Add x64 deputil.lib to NativeSdkMsi.
