@@ -1,3 +1,19 @@
+## WixBuild: Version 3.9.1006.0
+
+* RobMen: WIXBUG:4114 - PostQuitMessage in wixstdba from WM_NCDESTROY to avoid hangs.
+
+* HeathS: Add Windows "Threshold" support to burn stub.
+
+* RobMen: WIXBUG:4513 - Fix condition keyword detection in modularization regex.
+
+## WixBuild: Version 3.9.901.0
+
+* BobArnson: WIXBUG:4510 - Empty the post-reboot resume command line when recreating it.
+
+* SeanHall: WIXBUG:4507 - Fix crash in mbapreq when installing PrereqSupportPackages and related bundles are detected.
+
+* SeanHall: WIXBUG:4502 - Get MakeSfxCA to sort the Export table according to the PE/COFF spec.
+
 ## WixBuild: Version 3.9.818.0
 
 * RobMen: WIXBUG:4501 - Add file size to upload metadata for use in releases feed.
