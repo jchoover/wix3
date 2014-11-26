@@ -11,6 +11,7 @@
 #include "precomp.h"
 
 static const LPCWSTR WIXBUNDLE_VARIABLE_ELEVATED = L"WixBundleElevated";
+static const LPCWSTR WIXBUNDLE_VARIABLE_VERSION = L"WixBundleVersion";
 static const LPCWSTR WIXBUNDLE_VARIABLE_UPDATE_VERSION = L"WixBundleUpdateVersion";
 
 static const LPCWSTR WIXSTDBA_WINDOW_CLASS = L"WixStdBA";
@@ -335,7 +336,7 @@ public: // IBootstrapperApplication
         DWORD64 dw64InstalledVersion = 0;
         LPWSTR wzUpdatedVersion = NULL;
 
-        m_pEngine->GetVariableVersion(BURN_BUNDLE_VERSION, &dw64InstalledVersion);
+        m_pEngine->GetVariableVersion(WIXBUNDLE_VARIABLE_VERSION, &dw64InstalledVersion);
         fUpdateAvailable = (dw64InstalledVersion < dw64Version );
 
         hr = FileVersionToStringEx(dw64Version, &wzUpdatedVersion);
@@ -371,7 +372,7 @@ LExit:
 #endif
         if (FAILED(hrStatus))
         {
-            // For offline installs, if the initial detection fails we will get a failed HRESULT here.
+            // For off-line installs, if the initial detection fails we will get a failed HRESULT here.
             // If the update button was clicked, we want to fail
             if (E_FILE_NOT_FOUND == hrStatus && !m_fCheckForUpdateButtonClicked) 
             {
