@@ -44,12 +44,12 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
         }
 
         [DebuggerStepThrough]
-        public bool CanExecute(object parameter)
+        public virtual bool CanExecute(object parameter)
         {
             return this.canExecute == null ? true : this.canExecute(parameter);
         }
 
-        public void Execute(object parameter)
+        public virtual void Execute(object parameter)
         {
             this.execute(parameter);
         }

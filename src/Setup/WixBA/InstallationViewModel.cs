@@ -203,7 +203,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
             {
                 if (this.installCommand == null)
                 {
-                    this.installCommand = new RelayCommand(param => WixBA.Plan(LaunchAction.Install), param => this.root.State == InstallationState.DetectedAbsent);
+                    this.installCommand = new SingleShotRelayCommand(param => WixBA.Plan(LaunchAction.Install), param => this.root.State == InstallationState.DetectedAbsent);
                 }
 
                 return this.installCommand;
@@ -221,7 +221,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
             {
                 if (this.repairCommand == null)
                 {
-                    this.repairCommand = new RelayCommand(param => WixBA.Plan(LaunchAction.Repair), param => this.root.State == InstallationState.DetectedPresent);
+                    this.repairCommand = new SingleShotRelayCommand(param => WixBA.Plan(LaunchAction.Repair), param => this.root.State == InstallationState.DetectedPresent);
                 }
 
                 return this.repairCommand;
@@ -244,7 +244,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
             {
                 if (this.uninstallCommand == null)
                 {
-                    this.uninstallCommand = new RelayCommand(param => WixBA.Plan(LaunchAction.Uninstall), param => this.root.State == InstallationState.DetectedPresent);
+                    this.uninstallCommand = new SingleShotRelayCommand(param => WixBA.Plan(LaunchAction.Uninstall), param => this.root.State == InstallationState.DetectedPresent);
                 }
 
                 return this.uninstallCommand;

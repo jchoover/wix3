@@ -15,7 +15,6 @@
     <RootNamespace>Microsoft.Tools.WindowsInstallerXml.UX</RootNamespace>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
   </PropertyGroup>
-
   <ItemGroup>
     <Compile Include="Hresult.cs" />
     <Compile Include="Model.cs" />
@@ -36,6 +35,7 @@
       <DependentUpon>RootView.xaml</DependentUpon>
     </Compile>
     <Compile Include="RootViewModel.cs" />
+    <Compile Include="SingleShotRelayCommand.cs" />
     <Compile Include="UpdateViewModel.cs" />
     <Compile Include="WixBA.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -44,7 +44,6 @@
       <SubType>Designer</SubType>
     </None>
   </ItemGroup>
-
   <ItemGroup>
     <Resource Include="Resources\exit.png" />
     <Resource Include="Resources\gear.png" />
@@ -52,7 +51,6 @@
     <Resource Include="Resources\news.png" />
     <Resource Include="Resources\wrench.png" />
   </ItemGroup>
-
   <ItemGroup>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
@@ -67,6 +65,5 @@
     <Reference Include="WindowsBase" />
     <ProjectReference Include="..\..\ext\BalExtension\mba\core\core.csproj" />
   </ItemGroup>
-
   <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildProjectDirectory), wix.proj))\tools\WixBuild.targets" />
 </Project>
