@@ -36,7 +36,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
     /// <summary>
     /// The states of installation.
     /// </summary>
-    public enum InstallationState
+    public enum BAState
     {
         Initializing,
         Detecting,
@@ -204,7 +204,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
 
         public bool ExitEnabled
         {
-            get { return this.root.InstallState != InstallationState.Applying; }
+            get { return this.root.BAState != BAState.Applying; }
         }
 
         public ICommand InstallCommand
@@ -213,7 +213,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
             {
                 if (this.installCommand == null)
                 {
-                    this.installCommand = new RelayCommand(param => WixBA.Plan(LaunchAction.Install), param => this.root.DetectState == DetectionState.Absent && this.root.InstallState == InstallationState.Waiting);
+                    this.installCommand = new RelayCommand(param => WixBA.Plan(LaunchAction.Install), param => this.root.DetectState == DetectionState.Absent && this.root.BAState == BAState.Waiting);
                 }
 
                 return this.installCommand;
@@ -231,7 +231,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
             {
                 if (this.repairCommand == null)
                 {
-                    this.repairCommand = new RelayCommand(param => WixBA.Plan(LaunchAction.Repair), param => this.root.DetectState == DetectionState.Present && this.root.InstallState == InstallationState.Waiting);
+                    this.repairCommand = new RelayCommand(param => WixBA.Plan(LaunchAction.Repair), param => this.root.DetectState == DetectionState.Present && this.root.BAState == BAState.Waiting);
                 }
 
                 return this.repairCommand;
@@ -245,7 +245,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
 
         public bool CompleteEnabled
         {
-            get { return this.root.InstallState == InstallationState.Applied; }
+            get { return this.root.BAState == BAState.Applied; }
         }
 
         public ICommand UninstallCommand
@@ -254,7 +254,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
             {
                 if (this.uninstallCommand == null)
                 {
-                    this.uninstallCommand = new RelayCommand(param => WixBA.Plan(LaunchAction.Uninstall), param => this.root.DetectState == DetectionState.Present && this.root.InstallState == InstallationState.Waiting);
+                    this.uninstallCommand = new RelayCommand(param => WixBA.Plan(LaunchAction.Uninstall), param => this.root.DetectState == DetectionState.Present && this.root.BAState == BAState.Waiting);
                 }
 
                 return this.uninstallCommand;
@@ -272,7 +272,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
             {
                 if (this.tryAgainCommand == null)
                 {
-                    this.tryAgainCommand = new RelayCommand(param => WixBA.Plan(WixBA.Model.PlannedAction), param => this.root.InstallState == InstallationState.Failed);
+                    this.tryAgainCommand = new RelayCommand(param => WixBA.Plan(WixBA.Model.PlannedAction), param => this.root.BAState == BAState.Failed);
                 }
 
                 return this.tryAgainCommand;
@@ -288,11 +288,11 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
         {
             get
             {
-                switch (this.root.InstallState)
+                switch (this.root.BAState)
                 {
-                    case InstallationState.Initializing:
+                    case BAState.Initializing:
                         return "Initializing...";
-                    case InstallationState.Waiting:
+                    case BAState.Waiting:
                         switch (this.root.DetectState)
                         {
 
@@ -307,7 +307,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
                             default :
                                 return "Unexpected Detection state";
                         }
-                    case InstallationState.Applying:
+                    case BAState.Applying:
                         switch (WixBA.Model.PlannedAction)
                         {
                             case LaunchAction.Install:
@@ -327,7 +327,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
                                 return "Unexpected action state";
                         }
 
-                    case InstallationState.Applied:
+                    case BAState.Applied:
                         switch (WixBA.Model.PlannedAction)
                         {
                             case LaunchAction.Install:
@@ -347,7 +347,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
                                 return "Unexpected action state";
                         }
 
-                    case InstallationState.Failed:
+                    case BAState.Failed:
                         if (this.root.Canceled)
                         {
                             return "Canceled";
@@ -411,7 +411,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
         {
             // Parse the command line string before any planning.
             this.ParseCommandLine();
-            this.root.InstallState = InstallationState.Waiting;
+            this.root.BAState = BAState.Waiting;
 
             if (LaunchAction.Uninstall == WixBA.Model.Command.Action)
             {
@@ -439,7 +439,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
                         );
                     }
 
-                    this.root.InstallState = InstallationState.Failed;
+                    this.root.BAState = BAState.Failed;
                     return;
                 }
 
@@ -462,7 +462,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
             }
             else
             {
-                this.root.InstallState = InstallationState.Failed;
+                this.root.BAState = BAState.Failed;
             }
         }
 
@@ -478,13 +478,13 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
         {
             if (Hresult.Succeeded(e.Status))
             {
-                this.root.PreApplyState = this.root.InstallState;
-                this.root.InstallState = InstallationState.Applying;
+                this.root.PreApplyState = this.root.BAState;
+                this.root.BAState = BAState.Applying;
                 WixBA.Model.Engine.Apply(this.root.ViewWindowHandle);
             }
             else
             {
-                this.root.InstallState = InstallationState.Failed;
+                this.root.BAState = BAState.Failed;
             }
         }
 
@@ -524,9 +524,9 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
                 if (!this.root.Canceled)
                 {
                     // If the error is a cancel coming from the engine during apply we want to go back to the preapply state.
-                    if (InstallationState.Applying == this.root.InstallState && (int)Error.UserCancelled == e.ErrorCode)
+                    if (BAState.Applying == this.root.BAState && (int)Error.UserCancelled == e.ErrorCode)
                     {
-                        this.root.InstallState = this.root.PreApplyState;
+                        this.root.BAState = this.root.PreApplyState;
                     }
                     else
                     {
@@ -628,9 +628,9 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
 
             // Set the state to applied or failed unless the state has already been set back to the preapply state
             // which means we need to show the UI as it was before the apply started.
-            if (this.root.InstallState != this.root.PreApplyState)
+            if (this.root.BAState != this.root.PreApplyState)
             {
-                this.root.InstallState = Hresult.Succeeded(e.Status) ? InstallationState.Applied : InstallationState.Failed;
+                this.root.BAState = Hresult.Succeeded(e.Status) ? BAState.Applied : BAState.Failed;
             }
         }
 

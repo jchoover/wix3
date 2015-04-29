@@ -45,7 +45,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
 
         public bool ProgressEnabled
         {
-            get { return this.root.InstallState == InstallationState.Applying; }
+            get { return this.root.BAState == BAState.Applying; }
         }
 
         public int Progress

@@ -37,8 +37,8 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
         private ICommand closeCommand;
 
         private bool canceled;
-        private InstallationState installstate;
-        private DetectionState detectstate;
+        private BAState baState;
+        private DetectionState detectState;
 
         /// <summary>
         /// Creates a new model of the root view.
@@ -81,7 +81,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
                             this.Canceled = (MessageBoxResult.Yes == MessageBox.Show(WixBA.View, "Are you sure you want to cancel?", "WiX Toolset", MessageBoxButton.YesNo, MessageBoxImage.Error));
                         }
                     },
-                    param => this.InstallState == InstallationState.Applying);
+                    param => this.BAState == BAState.Applying);
                 }
 
                 return this.cancelCommand;
@@ -117,14 +117,14 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
         {
             get
             {
-                return this.detectstate;
+                return this.detectState;
             }
 
             set
             {
-                if (this.detectstate != value)
+                if (this.detectState != value)
                 {
-                    this.detectstate = value;
+                    this.detectState = value;
 
                     // Notify all the properties derived from the state that the state changed.
                     base.OnPropertyChanged("DetectState");
@@ -134,23 +134,23 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
         }
 
         /// <summary>
-        /// Gets and sets the installation state of the view's model.
+        /// Gets and sets the BA state of the view's model.
         /// </summary>
-        public InstallationState InstallState
+        public BAState BAState
         {
             get
             {
-                return this.installstate;
+                return this.baState;
             }
 
             set
             {
-                if (this.installstate != value)
+                if (this.baState != value)
                 {
-                    this.installstate = value;
+                    this.baState = value;
 
                     // Notify all the properties derived from the state that the state changed.
-                    base.OnPropertyChanged("InstallState");
+                    base.OnPropertyChanged("BAState");
                     base.OnPropertyChanged("CancelEnabled");
                 }
             }
@@ -159,7 +159,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.UX
         /// <summary>
         /// Gets and sets the state of the view's model before apply begins in order to return to that state if cancel or rollback occurs.
         /// </summary>
-        public InstallationState PreApplyState { get; set; }
+        public BAState PreApplyState { get; set; }
 
         /// <summary>
         /// Gets and sets the path where the bundle is currently installed or will be installed.
