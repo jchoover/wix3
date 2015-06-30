@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  <copyright file="tables.xml" company="Outercurve Foundation">
+    Copyright (c) 2004, Outercurve Foundation.
+    This software is released under Microsoft Reciprocal License (MS-RL).
+    The license and further copyright text can be found in the file
+    LICENSE.TXT at the root directory of the distribution.
+  </copyright>
+
+  The table definitions for the Windows Installer XML Toolset Ini Extension.
+-->
+<tableDefinitions xmlns="http://schemas.microsoft.com/wix/2006/tables">
+    
+    <tableDefinition name="WixIniSearch" createSymbols="yes">
+        <columnDefinition name="WixIniSearch" type="string" length="72" primaryKey="yes" modularize="column"
+                category="identifier" description="Identifier for the WixIniSearch row in the package."/>
+        <columnDefinition name="Value" type="string" length="72" modularize="property"
+                category="identifier" description="Name of Property that will receive the Value of the given section/key from the ini file."/>        
+        <columnDefinition name="Name" type="string" length="255" modularize="column"
+                category="formatted" description="Path and name of ini file to search."/>
+        <columnDefinition name="Section" type="string" length="255" modularize="column"
+                category="text" description="Section in ini file to read."/>
+        <columnDefinition name="Key" type="string" length="255" modularize="column"
+                category="text" description="Key in Section of ini file to read."/>        
+
+    </tableDefinition>
+</tableDefinitions>

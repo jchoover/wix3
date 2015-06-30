@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  <copyright file="gaming.xsd" company="Outercurve Foundation">
+    Copyright (c) 2004, Outercurve Foundation.
+    This software is released under Microsoft Reciprocal License (MS-RL).
+    The license and further copyright text can be found in the file
+    LICENSE.TXT at the root directory of the distribution.
+  </copyright>
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+          xmlns:xse="http://schemas.microsoft.com/wix/2005/XmlSchemaExtension"
+         xmlns:html="http://www.w3.org/1999/xhtml"
+    targetNamespace="http://schemas.microsoft.com/wix/IniExtension"
+              xmlns="http://schemas.microsoft.com/wix/IniExtension">
+    <xs:annotation>
+        <xs:documentation>
+            The source code schema for the Windows Installer XML Toolset Ini Extension.
+        </xs:documentation>
+    </xs:annotation>
+
+    <xs:import namespace="http://schemas.microsoft.com/wix/2006/wi" />
+
+    <xs:simpleType name="LongFileNameType">
+        <xs:annotation>
+            <xs:documentation>Values of this type will look like: "Long File Name.extension".  Legal long names contain no more than 260 characters and must contain at least one non-period character.  The following characters are not allowed: \ ? | &gt; : / * " or less-than.  The name must be shorter than 260 characters.  The value could also be a localization variable with the format !(loc.VARIABLE).</xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[^\\\?|&gt;&lt;:/\*&quot;]{1,259}|([!$])\(loc\.[_A-Za-z][0-9A-Za-z_.]*\)" />
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:element name="IniSearchEx">
+        <xs:annotation>
+            <xs:documentation>
+                Reads a value from an ini file, similar to IniFileSearch but allows for reading outside the windows directory.
+            </xs:documentation>
+            <xs:appinfo>
+                <xse:parent namespace="http://schemas.microsoft.com/wix/2006/wi" ref="Property" />
+            </xs:appinfo>
+        </xs:annotation>
+        <xs:complexType>
+            <xs:attribute name="Id" use="required" type="xs:string">
+                <xs:annotation>
+                    <xs:documentation>External key into the Signature table.</xs:documentation>
+                </xs:annotation>
+            </xs:attribute>
+            <xs:attribute name="Name" type="xs:string" use="required">
+                <xs:annotation>
+                    <xs:documentation>
+                        In prior versions of the WiX toolset, this attribute specified the short name.
+                        This attribute's value may now be either a short or long name.
+                        If a short name is specified, the ShortName attribute may not be specified.
+                        If a long name is specified, the LongName attribute may not be specified.
+                        Also, if this value is a long name, the ShortName attribute may be omitted to
+                        allow WiX to attempt to generate a unique short name.
+                        However, if you wish to manually specify the short name, then the ShortName
+                        attribute may be specified.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:attribute>
+            
+            <xs:attribute name="Key" use="required" type="xs:string">
+                <xs:annotation>
+                    <xs:documentation>The key value within the section.</xs:documentation>
+                </xs:annotation>
+            </xs:attribute>
+            <xs:attribute name="Section" use="required" type="xs:string">
+                <xs:annotation>
+                    <xs:documentation>The localizable .ini file section.</xs:documentation>
+                </xs:annotation>
+            </xs:attribute>
+            
+
+          </xs:complexType>
+    </xs:element>
+
+    <xs:simpleType name="Guid">
+        <xs:annotation>
+            <xs:documentation>Values of this type will look like: "01234567-89AB-CDEF-0123-456789ABCDEF" or "{01234567-89AB-CDEF-0123-456789ABCDEF}". Also allows "PUT-GUID-HERE" for use in examples.</xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[{(]?[0-9A-Fa-f]{8}\-?[0-9A-Fa-f]{4}\-?[0-9A-Fa-f]{4}\-?[0-9A-Fa-f]{4}\-?[0-9A-Fa-f]{12}[})]?|PUT\-GUID\-HERE|([!$])\(loc\.[_A-Za-z][0-9A-Za-z_.]*\)|!\(wix\.[_A-Za-z][0-9A-Za-z_.]*\)"/>
+        </xs:restriction>
+    </xs:simpleType>
+</xs:schema>
