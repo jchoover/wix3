@@ -153,6 +153,7 @@ static HRESULT OnSessionResume(
     );
 static HRESULT OnSessionEnd(
     __in BURN_REGISTRATION* pRegistration,
+    __in BURN_VARIABLES* pVariables,
     __in BYTE* pbData,
     __in DWORD cbData
     );
@@ -273,6 +274,8 @@ extern "C" HRESULT ElevationElevate(
     hr = PipeCreatePipes(&pEngineState->companionConnection, TRUE, &hPipesCreatedEvent);
     ExitOnFailure(hr, "Failed to create pipe and cache pipe.");
 
+    LogId(REPORT_STANDARD, MSG_LAUNCH_ELEVATED_ENGINE_STARTING);
+
     do
     {
         nResult = IDOK;
@@ -281,8 +284,12 @@ extern "C" HRESULT ElevationElevate(
         hr = PipeLaunchChildProcess(pEngineState->sczBundleEngineWorkingPath, &pEngineState->companionConnection, TRUE, hwndParent);
         if (SUCCEEDED(hr))
         {
+            LogId(REPORT_STANDARD, MSG_LAUNCH_ELEVATED_ENGINE_SUCCESS);
+
             hr = PipeWaitForChildConnect(&pEngineState->companionConnection);
             ExitOnFailure(hr, "Failed to connect to elevated child process.");
+
+            LogId(REPORT_STANDARD, MSG_CONNECT_TO_ELEVATED_ENGINE_SUCCESS);
         }
         else if (HRESULT_FROM_WIN32(ERROR_CANCELLED) == hr)
         {
@@ -1141,8 +1148,12 @@ extern "C" HRESULT ElevationChildResumeAutomaticUpdates()
 {
     HRESULT hr = S_OK;
 
+    LogId(REPORT_STANDARD, MSG_RESUME_AU_STARTING);
+
     hr = WuaResumeAutomaticUpdates();
     ExitOnFailure(hr, "Failed to resume automatic updates after pausing them, continuing...");
+
+    LogId(REPORT_STANDARD, MSG_RESUME_AU_SUCCEEDED);
 
 LExit:
     return hr;
@@ -1458,7 +1469,7 @@ static HRESULT ProcessElevatedChildMessage(
         break;
 
     case BURN_ELEVATION_MESSAGE_TYPE_SESSION_END:
-        hrResult = OnSessionEnd(pContext->pRegistration, (BYTE*)pMsg->pvData, pMsg->cbData);
+        hrResult = OnSessionEnd(pContext->pRegistration, pContext->pVariables, (BYTE*)pMsg->pvData, pMsg->cbData);
         break;
 
     case BURN_ELEVATION_MESSAGE_TYPE_SAVE_STATE:
@@ -1618,15 +1629,21 @@ static HRESULT OnApplyInitialize(
     // Attempt to pause AU with best effort.
     if (BURN_AU_PAUSE_ACTION_IFELEVATED == dwAUAction || BURN_AU_PAUSE_ACTION_IFELEVATED_NORESUME == dwAUAction)
     {
+        LogId(REPORT_STANDARD, MSG_PAUSE_AU_STARTING);
+
         hr = WuaPauseAutomaticUpdates();
         if (FAILED(hr))
         {
             LogId(REPORT_STANDARD, MSG_FAILED_PAUSE_AU, hr);
             hr = S_OK;
         }
-        else if (BURN_AU_PAUSE_ACTION_IFELEVATED == dwAUAction)
+        else
         {
-            *pfDisabledWindowsUpdate = TRUE;
+            LogId(REPORT_STANDARD, MSG_PAUSE_AU_SUCCEEDED);
+            if (BURN_AU_PAUSE_ACTION_IFELEVATED == dwAUAction)
+            {
+                *pfDisabledWindowsUpdate = TRUE;
+            }
         }
     }
 
@@ -1756,6 +1773,7 @@ LExit:
 
 static HRESULT OnSessionEnd(
     __in BURN_REGISTRATION* pRegistration,
+    __in BURN_VARIABLES* pVariables,
     __in BYTE* pbData,
     __in DWORD cbData
     )
@@ -1777,7 +1795,7 @@ static HRESULT OnSessionEnd(
     ExitOnFailure(hr, "Failed to read dependency registration action.");
 
     // suspend session in per-machine process
-    hr = RegistrationSessionEnd(pRegistration, (BURN_RESUME_MODE)dwResumeMode, (BOOTSTRAPPER_APPLY_RESTART)dwRestart, (BURN_DEPENDENCY_REGISTRATION_ACTION)dwDependencyRegistrationAction);
+    hr = RegistrationSessionEnd(pRegistration, pVariables, (BURN_RESUME_MODE)dwResumeMode, (BOOTSTRAPPER_APPLY_RESTART)dwRestart, (BURN_DEPENDENCY_REGISTRATION_ACTION)dwDependencyRegistrationAction);
     ExitOnFailure(hr, "Failed to suspend registration session.");
 
 LExit:

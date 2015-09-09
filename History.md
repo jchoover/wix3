@@ -1,3 +1,77 @@
+## WixBuild: Version 3.10.0.2103
+
+* RobMen: WIXBUG:4882 - handle all kinds of bad version strings in WixTagExtension.
+
+## WixBuild: Version 3.10.0.2101
+
+* RobMen: WIXBUG:4879 - support x64 folders and bind variables in SWID Tags.
+
+## WixBuild: Version 3.10.0.2026
+
+* RobMen: WIXFEAT:4867 - Support ISO/IEC 19770-2:2105 (aka SWID Tags-2).
+
+* RobMen: WIXBUG:4817 - fix error message in OneTimeWixBuildInitialization.proj
+
+* BobArnson: WIXBUG:4180 - Add wixtoolset.org EULA service links.
+
+* BobArnson: WIXBUG:4804 - Add DAPI to get the right calling convention.
+
+* MikeGC: WIXBUG:4852 - Keep QuietExec function definition the same as in prior versions to avoid breaking anyone. The new function (with more parameters) is now named QuietExecEx.
+
+## WixBuild: Version 3.10.0.1823
+
+* @barnson: WIXFEAT:4789 - Phase I of .NET Framework 4.6 support (RC, full redist).
+
+* Lakmus85: WIXBUG:4614 - Validation added for the case when the project property is not empty (as stated in the comments to this method).
+
+* RobMen: WIXBUG:4778 - initialize logging before anything else.
+
+* JacobHoover: WIXBUG:4512 - fix WiX BA, prevent multiple install clicks
+
+* BobArnson: WIXFEAT:4781 - Do a best-effort duplication of strings instead of failing if there's a missing string.
+
+* BobArnson: WIXBUG:4786 - Replace default WixUI license with lorem ipsum text.
+
+* BobArnson: WIXBUG:4760 - Re-guid WixFolderNodeNonMemberProperties
+
+* HeathS: Refactor cache-only support in Burn
+  * Remove /cache command line support from engine
+  * Allow BA to request cache-only support
+
+* ErnestT: WIXBUG:4432 - Add burn support for only caching packages
+
+* HeathS: WIXBUG:4775 - Always set WixBundleOriginalSourceFolder if not already set
+
+* BMurri: WIXBUG:4532 - Make it an error for InstallPrivileges and InstallScope to specify contradictory values.
+
+## WixBuild: Version 3.10.0.1726
+
+* creativbox: WIXFEAT:4382 - Added files-in-use UI to WixStdBA
+
+* SeanHall: WIXBUG:4597 - Fix project harvesting in heat for Tools version 12.0 and 14.0.
+
+* HeathS: WIXBUG:3060 - Do not redownload package payloads when /layout is restarted.
+
+* SeanHall: WIXFEAT:4763 - Add literal flag to Burn variables to indicate that their values shouldn't be formatted.
+
+* BobArnson: WIXFEAT:4772 - Replace hyperlink ShelExec with ShelExecUnelevated.
+
+* BobArnson: WIXBUG:4716 - If a .wxl file is missing strings added in v3.10, duplicate the generic string from v3.9. Add support for doing so to locutil.
+
+## WixBuild: Version 3.10.0.1719
+
+* SeanHall: WIXBUG:4761 - Use the package's exit code to tell if the prereq was installed.
+
+* BobArnson: WIXBUG:4734 - Rewrote type-51 CAs using SetProperty.
+
+* BobArnson: WIXFEAT:4720 - Added bind-time variables for .NET Framework package groups detect condition, install condition, and package directories.
+
+* HeathS: Add VSIX property for VS2015 and fix searches for previous versions.
+
+* BobArnson: Add libs_minimal.proj with just the libraries needed for tools/ tree build. This prevents the build from backing up behind a full libs/ tree build, which gets more painful the more versions of Visual Studio that are installed.
+
+* BobArnson: WIXBUG:4750 - Add a note about binary (in)compatibility.
+
 * RobMen: WIXBUG:4732 - fix documentation links to MsiServiceConfig and MsiServiceConfigFailureActions.
 
 * BobArnson: WIXFEAT:4719 - Implement ExePackage/CommandLine:
