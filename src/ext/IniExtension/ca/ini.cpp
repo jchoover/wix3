@@ -14,11 +14,11 @@
 #include "precomp.h"
 
 LPCWSTR vcsIniSearchQuery =
-    L"SELECT `WixIniSearch`.`WixIniSearch`,   `WixIniSearch`.`Name`,   `WixIniSearch`.`Section`, "
-    L"`WixIniSearch`.`Key`, `WixIniSearch`.`Value` "
-    L"FROM `WixIniSearch`";
+    L"SELECT `WixIniFileSearchEx`.`Id`,   `WixIniFileSearchEx`.`Name`,   `WixIniFileSearchEx`.`Section`, "
+    L"`WixIniFileSearchEx`.`Key`, `WixIniFileSearchEx`.`Value` "
+    L"FROM `WixIniFileSearchEx`";
 
-enum eIniSearchQuery { eiqInstanceId = 1, eiqFile, eiqSection, eiqKey, eiqValue };
+enum eIniSearchQuery { eiqId = 1, eiqFile, eiqSection, eiqKey, eiqValue };
 
 extern "C" HRESULT ReadIni(
     __in LPCWSTR wzFile,
@@ -86,23 +86,23 @@ extern "C" UINT __stdcall ExecIniSearch(
     ExitOnFailure(hr, "failed to initialize");
 
     // anything to do?
-    if (S_OK != WcaTableExists(L"WixIniSearch"))
+    if (S_OK != WcaTableExists(L"WixIniFileSearchEx"))
     {
-        WcaLog(LOGMSG_STANDARD, "WixIniSearch table doesn't exist, so there are no ini files to read");
+        WcaLog(LOGMSG_STANDARD, "WixIniFileSearchEx table doesn't exist, so there are no ini files to read");
         goto LExit;
     }
 
     // query and loop through all the ini searches
     hr = WcaOpenExecuteView(vcsIniSearchQuery, &hView);
-    ExitOnFailure(hr, "failed to open view on WixIniSearch table");
+    ExitOnFailure(hr, "failed to open view on WixIniFileSearchEx table");
 
     while (S_OK == (hr = WcaFetchRecord(hView, &hRec)))
     {
         ++cSearches;
 
         // start with the instance guid
-        hr = WcaGetRecordString(hRec, eiqInstanceId, &pwzIniSearch);
-        ExitOnFailure(hr, "failed to get ini instance id");
+        hr = WcaGetRecordString(hRec, eiqId, &pwzIniSearch);
+        ExitOnFailure(hr, "failed to get ini id");
 
         // get file 
         hr = WcaGetRecordString(hRec, eiqFile, &pwzFile);
@@ -136,7 +136,7 @@ extern "C" UINT __stdcall ExecIniSearch(
     {
         hr = S_OK;
     }
-    ExitOnFailure(hr, "Failure occured while processing WixIniSearch table");
+    ExitOnFailure(hr, "Failure occurred while processing WixIniFileSearchEx table");
 
 LExit:
     ReleaseStr(pwzIniSearch);

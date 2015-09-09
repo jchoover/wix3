@@ -63,7 +63,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.Extensions
 
                     switch (element.LocalName)
                     {
-                        case "IniSearchEx":
+                        case "IniFileSearchEx":
                             this.ParseIniSearchElement(element, propertyId);
                             break;
                         default:
@@ -140,7 +140,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.Extensions
 
             if (!this.Core.EncounteredError)
             {
-                Row row = this.Core.CreateRow(sourceLineNumbers, "WixIniSearch");
+                Row row = this.Core.CreateRow(sourceLineNumbers, "WixIniFileSearchEx");
                 row[0] = id;
                 row[1] = property;
                 row[2] = file;

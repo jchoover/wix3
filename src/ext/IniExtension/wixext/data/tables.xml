@@ -11,8 +11,8 @@
 -->
 <tableDefinitions xmlns="http://schemas.microsoft.com/wix/2006/tables">
     
-    <tableDefinition name="WixIniSearch" createSymbols="yes">
-        <columnDefinition name="WixIniSearch" type="string" length="72" primaryKey="yes" modularize="column"
+    <tableDefinition name="WixIniFileSearchEx" createSymbols="yes">
+        <columnDefinition name="Id" type="string" length="72" primaryKey="yes" modularize="column"
                 category="identifier" description="Identifier for the WixIniSearch row in the package."/>
         <columnDefinition name="Value" type="string" length="72" modularize="property"
                 category="identifier" description="Name of Property that will receive the Value of the given section/key from the ini file."/>        

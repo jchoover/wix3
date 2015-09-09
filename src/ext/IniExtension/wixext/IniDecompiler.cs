@@ -34,7 +34,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.Extensions
         {
             switch (table.Name)
             {
-                case "WixIniSearch":
+                case "WixIniFileSearchEx":
                     this.DecompileWixIniSearchTable(table);
                     break;
                 default:
@@ -51,7 +51,7 @@ namespace Microsoft.Tools.WindowsInstallerXml.Extensions
         {
             foreach (Row row in table.Rows)
             {
-                Ini.IniSearchEx search = new Ini.IniSearchEx();
+                Ini.IniFileSearchEx search = new Ini.IniFileSearchEx();
 
                 search.Id = (string)row[0];                
                 search.Name = (string)row[2];
