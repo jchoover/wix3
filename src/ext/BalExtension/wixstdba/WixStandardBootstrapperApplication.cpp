@@ -1335,12 +1335,9 @@ private: // privates
     //
     HRESULT InitializeData()
     {
-        //Dutil_Assert(__FILE__, __LINE__);
         HRESULT hr = S_OK;
         LPWSTR sczModulePath = NULL;
         IXMLDOMDocument *pixdManifest = NULL;
-
-        LoadBootstrapperBAFunctions();
 
         hr = BalManifestLoad(m_hModule, &pixdManifest);
         BalExitOnFailure(hr, "Failed to load bootstrapper application manifest.");
@@ -2786,7 +2783,7 @@ private: // privates
                         (BOOTSTRAPPER_ACTION_REPAIR == m_plannedAction && ThemeControlExists(m_pTheme, WIXSTDBA_CONTROL_FAILURE_REPAIR_HEADER)))
                     {
                         ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_FAILURE_HEADER, FALSE); 
-                }
+                    }
                     else
                     {
                         ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_FAILURE_HEADER, TRUE);

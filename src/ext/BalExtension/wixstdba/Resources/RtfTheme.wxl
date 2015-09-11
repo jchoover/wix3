@@ -30,7 +30,6 @@
   <String Id="ProgressCancelButton">&amp;Cancel</String>
   <String Id="ModifyHeader">Modify Setup</String>
   <String Id="ModifyCheckUpdateButton">Check for Updates</String>
-<!--  <String Id="ModifyUpdateButton">Update</String>-->
   <String Id="ModifyRepairButton">&amp;Repair</String>
   <String Id="ModifyUninstallButton">&amp;Uninstall</String>
   <String Id="ModifyCloseButton">&amp;Close</String>
