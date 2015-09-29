@@ -1544,7 +1544,7 @@ private: // privates
         BalExitOnFailure(hr, "Failed to read wixstdba options from BootstrapperApplication.xml manifest.");
 
         hr = XmlGetAttributeNumber(pNode, L"SuppressOptionsUI", &dwBool);
-        if (E_NOTFOUND == hr)
+		if (S_FALSE == hr)
         {
             hr = S_OK;
         }
@@ -1556,7 +1556,7 @@ private: // privates
 
         dwBool = 0;
         hr = XmlGetAttributeNumber(pNode, L"SuppressDowngradeFailure", &dwBool);
-        if (E_NOTFOUND == hr)
+		if (S_FALSE == hr)
         {
             hr = S_OK;
         }
@@ -1568,7 +1568,7 @@ private: // privates
 
         dwBool = 0;
         hr = XmlGetAttributeNumber(pNode, L"SuppressRepair", &dwBool);
-        if (E_NOTFOUND == hr)
+		if (S_FALSE == hr)
         {
             hr = S_OK;
         }
@@ -1579,7 +1579,7 @@ private: // privates
         BalExitOnFailure(hr, "Failed to get SuppressRepair value.");
 
         hr = XmlGetAttributeNumber(pNode, L"ShowVersion", &dwBool);
-        if (E_NOTFOUND == hr)
+		if (S_FALSE == hr)
         {
             hr = S_OK;
         }
@@ -1590,7 +1590,7 @@ private: // privates
         BalExitOnFailure(hr, "Failed to get ShowVersion value.");
 
         hr = XmlGetAttributeNumber(pNode, L"SupportCacheOnly", &dwBool);
-        if (E_NOTFOUND == hr)
+		if (S_FALSE == hr)
         {
             hr = S_OK;
         }
@@ -1601,7 +1601,7 @@ private: // privates
         BalExitOnFailure(hr, "Failed to get SupportCacheOnly value.");
 
         hr = XmlGetAttributeNumber(pNode, L"ShowFilesInUse", &dwBool);
-        if (E_NOTFOUND == hr)
+        if (S_FALSE == hr)
         {
             hr = S_OK;
         }

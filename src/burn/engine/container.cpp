@@ -89,7 +89,7 @@ extern "C" HRESULT ContainersParseFromXml(
 
         // @AttachedIndex
         hr = XmlGetAttributeNumber(pixnNode, L"AttachedIndex", &pContainer->dwAttachedIndex);
-        if (E_NOTFOUND != hr || pContainer->fAttached) // if it is an attached container it must have an index
+		if (S_FALSE != hr || pContainer->fAttached) // if it is an attached container it must have an index
         {
             ExitOnFailure(hr, "Failed to get @AttachedIndex.");
         }
