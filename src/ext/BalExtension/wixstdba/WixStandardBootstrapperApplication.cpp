@@ -710,7 +710,7 @@ LExit:
         if (wzPackageId && *wzPackageId)
         {
             BAL_INFO_PACKAGE* pPackage = NULL;
-            HRESULT hr = BalInfoFindPackageById(&m_Bundle.packages, wzPackageId, &pPackage);
+            hr = BalInfoFindPackageById(&m_Bundle.packages, wzPackageId, &pPackage);
 
             // If we don't find the PackageId, test to see if the ID is the BundleId
             if (SUCCEEDED(hr) && pPackage->sczDisplayName)
