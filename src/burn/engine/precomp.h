@@ -28,6 +28,7 @@
 #include <aclutil.h>
 #include <apputil.h>
 #include <buffutil.h>
+#include <butil.h>
 #include <cabutil.h>
 #include <certutil.h>
 #include <cryputil.h>

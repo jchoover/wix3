@@ -31,6 +31,7 @@ const LPCWSTR REGISTRY_BUNDLE_UNINSTALL_STRING = L"UninstallString";
 const LPCWSTR REGISTRY_BUNDLE_RESUME_COMMAND_LINE = L"BundleResumeCommandLine";
 
 const LPCWSTR SWIDTAG_FOLDER = L"swidtag";
+const LPCWSTR REGISTRY_BUNDLE_SHARED_VARIABLE_KEY = L"shared";
 
 // internal function declarations
 
@@ -909,7 +910,7 @@ extern "C" HRESULT RegistrationSessionEnd(
         RemoveSoftwareTags(pVariables, &pRegistration->softwareTags);
 
         // build variable registry key path
-        hr = StrAllocFormatted(&sczVariableKey, L"%s\\%s", pRegistration->sczRegistrationKey, L"shared");
+        hr = StrAllocFormatted(&sczVariableKey, L"%s\\%s", pRegistration->sczRegistrationKey, REGISTRY_BUNDLE_SHARED_VARIABLE_KEY);
         ExitOnFailure(hr, "Failed to build variable registry key path.");
 
         // Delete registration variable key.
@@ -991,7 +992,7 @@ extern "C" HRESULT RegistrationSaveSharedVariables(
     if (pVariables->rgVariables)
     {
         // build variable registry key path
-        hr = StrAllocFormatted(&sczVariableKey , L"%s\\%s", pRegistration->sczRegistrationKey, L"shared");
+        hr = StrAllocFormatted(&sczVariableKey , L"%s\\%s", pRegistration->sczRegistrationKey, REGISTRY_BUNDLE_SHARED_VARIABLE_KEY);
         ExitOnFailure(hr, "Failed to build variable registry key path.");
 
         // create registration key

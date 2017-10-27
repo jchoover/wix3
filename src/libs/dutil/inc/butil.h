@@ -26,6 +26,14 @@ HRESULT DAPI BundleEnumRelatedBundle(
   __out_ecount(MAX_GUID_CHARS+1)  LPWSTR lpBundleIdBuf
     );
 
+HRESULT DAPI BundleGetBundleSharedVariable(
+  __in LPCWSTR wzBundleId,
+  __in LPCWSTR wzAttribute,
+  __out_opt LPDWORD pdwType,
+  __out_bcount_opt(*pcbData) PVOID pvData,
+  __inout_opt LPDWORD pcbData
+    );
+
 #ifdef __cplusplus
 }
 #endif
