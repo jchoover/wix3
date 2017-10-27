@@ -9,10 +9,13 @@ const LPCWSTR BUNDLE_REGISTRATION_REGISTRY_UNINSTALL_KEY = L"SOFTWARE\\Microsoft
 const LPCWSTR BUNDLE_REGISTRATION_REGISTRY_BUNDLE_UPGRADE_CODE = L"BundleUpgradeCode";
 const LPCWSTR BUNDLE_REGISTRATION_REGISTRY_BUNDLE_PROVIDER_KEY = L"BundleProviderKey";
 
+const LPCWSTR REGISTRY_BUNDLE_SHARED_VARIABLE_KEY = L"shared";
+
 // Forward declarations.
 static HRESULT OpenBundleKey(
     __in LPCWSTR wzBundleId,
     __in BUNDLE_INSTALL_CONTEXT context, 
+    __in_opt LPCWSTR szSubKey,
     __inout HKEY *key);
 
 /********************************************************************
@@ -54,8 +57,8 @@ extern "C" HRESULT DAPI BundleGetBundleInfo(
         ExitOnFailure(hr = E_INVALIDARG, "An invalid parameter was passed to the function.");
     }
 
-    if (FAILED(hr = OpenBundleKey(wzBundleId, context = BUNDLE_INSTALL_CONTEXT_MACHINE, &hkBundle)) &&
-        FAILED(hr = OpenBundleKey(wzBundleId, context = BUNDLE_INSTALL_CONTEXT_USER, &hkBundle)))
+    if (FAILED(hr = OpenBundleKey(wzBundleId, context = BUNDLE_INSTALL_CONTEXT_MACHINE, NULL, &hkBundle)) &&
+        FAILED(hr = OpenBundleKey(wzBundleId, context = BUNDLE_INSTALL_CONTEXT_USER, NULL, &hkBundle)))
     {
         ExitOnFailure(E_FILENOTFOUND == hr ? HRESULT_FROM_WIN32(ERROR_UNKNOWN_PRODUCT) : hr, "Failed to locate bundle uninstall key path.");
     }
@@ -107,6 +110,164 @@ LExit:
     return hr;
 }
 
+/********************************************************************
+BundleGetBundleSharedVariable - Queries the bundle installation metadata for a given property
+
+RETURNS:
+E_INVALIDARG
+An invalid parameter was passed to the function.
+HRESULT_FROM_WIN32(ERROR_UNKNOWN_PRODUCT)
+The bundle is not installed
+HRESULT_FROM_WIN32(ERROR_UNKNOWN_PROPERTY)
+The property is unrecognized
+HRESULT_FROM_WIN32(ERROR_MORE_DATA)
+A buffer is too small to hold the requested data.
+E_NOTIMPL:
+Tried to read a bundle attribute for a type which has not been implemented
+
+All other returns are unexpected returns from other dutil methods.
+********************************************************************/
+extern "C" HRESULT DAPI BundleGetBundleSharedVariable(
+    __in LPCWSTR wzBundleId,
+    __in LPCWSTR wzAttribute,
+    __out_opt LPDWORD pdwType,
+    __out_bcount_opt(*pcbData) PVOID pvData,
+    __inout_opt LPDWORD pcbData
+)
+{
+    Assert(wzBundleId && wzAttribute);
+
+    HRESULT hr = S_OK;
+    BUNDLE_INSTALL_CONTEXT context = BUNDLE_INSTALL_CONTEXT_MACHINE;
+    LPWSTR sczValue = NULL;
+    HKEY hkBundle = NULL;
+    DWORD cbData = 0;
+    DWORD dwType = 0;
+    DWORD dwValue = 0;
+    DWORD64 qwValue = 0;
+
+    if (!wzBundleId || !wzAttribute || (pvData && !pcbData))
+    {
+        ExitOnFailure(hr = E_INVALIDARG, "An invalid parameter was passed to the function.");
+    }
+
+    if (FAILED(hr = OpenBundleKey(wzBundleId, context = BUNDLE_INSTALL_CONTEXT_MACHINE, REGISTRY_BUNDLE_SHARED_VARIABLE_KEY, &hkBundle)) &&
+        FAILED(hr = OpenBundleKey(wzBundleId, context = BUNDLE_INSTALL_CONTEXT_USER, REGISTRY_BUNDLE_SHARED_VARIABLE_KEY, &hkBundle)))
+    {
+        ExitOnFailure(E_FILENOTFOUND == hr ? HRESULT_FROM_WIN32(ERROR_UNKNOWN_PRODUCT) : hr, "Failed to locate bundle uninstall key path.");
+    }
+
+    // If the bundle doesn't have the property defined, return ERROR_UNKNOWN_PROPERTY
+    hr = RegGetType(hkBundle, wzAttribute, &dwType);
+    ExitOnFailure(E_FILENOTFOUND == hr ? HRESULT_FROM_WIN32(ERROR_UNKNOWN_PROPERTY) : hr, "Failed to locate bundle property.");
+
+    if (pdwType)
+    {
+        *pdwType = dwType;
+    }
+
+    switch (dwType)
+    {
+    case REG_SZ:
+        hr = RegReadString(hkBundle, wzAttribute, &sczValue);
+        ExitOnFailure(hr, "Failed to read string property.");
+        
+        if (pcbData)
+        {
+            // hr = StrMaxLength(&sczValue, pcbData);
+            // ExitOnFailure(hr, "Failed to determine length of string.");
+
+            hr = ::StringCchLengthW(sczValue, STRSAFE_MAX_CCH, reinterpret_cast<UINT_PTR*>(&cbData));
+            ExitOnFailure(hr, "Failed to calculate length of string");
+
+            if (pvData)
+            {
+                if (*pcbData <= cbData)
+                {
+                    *pcbData = ++cbData;
+                    ExitOnFailure(hr = HRESULT_FROM_WIN32(ERROR_MORE_DATA), "A buffer is too small to hold the requested data.");
+                }
+                // Safe to copy
+                hr = ::StringCchCatNExW(reinterpret_cast<LPWSTR>(pvData), *pcbData, sczValue, cbData, NULL, NULL, STRSAFE_FILL_BEHIND_NULL);
+                ExitOnFailure(hr, "Failed to copy the property value to the output buffer.");
+
+                *pcbData = cbData++;
+            }
+            else
+            {
+                *pcbData = cbData++;
+                ExitOnFailure(hr = HRESULT_FROM_WIN32(ERROR_SUCCESS), "A buffer is too small to hold the requested data.");
+            }            
+        }
+
+        break;
+    case REG_DWORD:
+        hr = RegReadNumber(hkBundle, wzAttribute, &dwValue);
+        ExitOnFailure(hr, "Failed to read dword property.");
+
+        if (pcbData)
+        {
+            if (pvData)
+            {
+                if (*pcbData < sizeof(DWORD))
+                {
+                    *pcbData = sizeof(DWORD);
+                    ExitOnFailure(hr = HRESULT_FROM_WIN32(ERROR_MORE_DATA), "A buffer is too small to hold the requested data.");
+                }
+
+                *reinterpret_cast<LPDWORD>(pvData) = dwValue;
+                *pcbData = sizeof(DWORD);
+            }
+        }
+        break;
+    case REG_QWORD:
+        hr = RegReadQword(hkBundle, wzAttribute, &qwValue);
+        ExitOnFailure(hr, "Failed to read qword property.");
+
+        if (pcbData)
+        {
+            if (pvData)
+            {
+                if (*pcbData < sizeof(DWORD64))
+                {
+                    *pcbData = sizeof(DWORD64);
+                    ExitOnFailure(hr = HRESULT_FROM_WIN32(ERROR_MORE_DATA), "A buffer is too small to hold the requested data.");
+                }
+
+                *reinterpret_cast<DWORD64*>(pvData) = qwValue;
+                *pcbData = sizeof(DWORD64);
+            }
+        }
+        break;
+    default:
+        ExitOnFailure1(hr = E_NOTIMPL, "Reading bundle info of type 0x%x not implemented.", dwType);
+
+    }
+
+    //hr = ::StringCchLengthW(sczValue, STRSAFE_MAX_CCH, reinterpret_cast<UINT_PTR*>(&cchSource));
+    //ExitOnFailure(hr, "Failed to calculate length of string");
+
+    //if (lpValueBuf)
+    //{
+    //    // cchSource is the length of the string not including the terminating null character
+    //    if (*pcchValueBuf <= cchSource)
+    //    {
+    //        *pcchValueBuf = ++cchSource;
+    //        ExitOnFailure(hr = HRESULT_FROM_WIN32(ERROR_MORE_DATA), "A buffer is too small to hold the requested data.");
+    //    }
+
+    //    hr = ::StringCchCatNExW(lpValueBuf, *pcchValueBuf, sczValue, cchSource, NULL, NULL, STRSAFE_FILL_BEHIND_NULL);
+    //    ExitOnFailure(hr, "Failed to copy the property value to the output buffer.");
+
+    //    *pcchValueBuf = cchSource++;
+    //}
+
+LExit:
+    ReleaseRegKey(hkBundle);
+    ReleaseStr(sczValue);
+
+    return hr;
+}
 /********************************************************************
 BundleEnumRelatedBundle - Queries the bundle installation metadata for installs with the given upgrade code
 
@@ -248,7 +409,8 @@ NOTE: caller is responsible for closing key
 ********************************************************************/
 HRESULT OpenBundleKey(
     __in LPCWSTR wzBundleId,
-    __in BUNDLE_INSTALL_CONTEXT context, 
+    __in BUNDLE_INSTALL_CONTEXT context,
+    __in_opt LPCWSTR szSubKey,
     __inout HKEY *key)
 {
     Assert(key && wzBundleId);
@@ -258,7 +420,15 @@ HRESULT OpenBundleKey(
     HKEY hkRoot = BUNDLE_INSTALL_CONTEXT_USER == context ? HKEY_CURRENT_USER : HKEY_LOCAL_MACHINE;
     LPWSTR sczKeypath = NULL;
 
-    hr = StrAllocFormatted(&sczKeypath, L"%ls\\%ls", BUNDLE_REGISTRATION_REGISTRY_UNINSTALL_KEY, wzBundleId);
+    if (szSubKey)
+    {
+        hr = StrAllocFormatted(&sczKeypath, L"%ls\\%ls\\%ls", BUNDLE_REGISTRATION_REGISTRY_UNINSTALL_KEY, wzBundleId, szSubKey);
+    }
+    else
+    {
+        hr = StrAllocFormatted(&sczKeypath, L"%ls\\%ls", BUNDLE_REGISTRATION_REGISTRY_UNINSTALL_KEY, wzBundleId);
+    }
+
     ExitOnFailure(hr, "Failed to allocate bundle uninstall key path.");
     
     hr = RegOpen(hkRoot, sczKeypath, KEY_READ, key);

@@ -368,27 +368,27 @@ namespace Microsoft.Tools.WindowsInstallerXml.Extensions
             {
                 if (!String.IsNullOrEmpty(launchTarget))
                 {
-                    this.Core.CreateVariableRow(sourceLineNumbers, "LaunchTarget", launchTarget, "string", false, false);
+                    this.Core.CreateVariableRow(sourceLineNumbers, "LaunchTarget", launchTarget, "string", false, 0);
                 }
 
                 if (!String.IsNullOrEmpty(launchTargetElevatedId))
                 {
-                    this.Core.CreateVariableRow(sourceLineNumbers, "LaunchTargetElevatedId", launchTargetElevatedId, "string", false, false);
+                    this.Core.CreateVariableRow(sourceLineNumbers, "LaunchTargetElevatedId", launchTargetElevatedId, "string", false, 0);
                 }
 
                 if (!String.IsNullOrEmpty(launchArguments))
                 {
-                    this.Core.CreateVariableRow(sourceLineNumbers, "LaunchArguments", launchArguments, "string", false, false);
+                    this.Core.CreateVariableRow(sourceLineNumbers, "LaunchArguments", launchArguments, "string", false, 0);
                 }
 
                 if (YesNoType.Yes == launchHidden)
                 {
-                    this.Core.CreateVariableRow(sourceLineNumbers, "LaunchHidden", "yes", "string", false, false);
+                    this.Core.CreateVariableRow(sourceLineNumbers, "LaunchHidden", "yes", "string", false, 0);
                 }
 
                 if (!String.IsNullOrEmpty(launchWorkingDir))
                 {
-                    this.Core.CreateVariableRow(sourceLineNumbers, "LaunchWorkingFolder", launchWorkingDir, "string", false, false);
+                    this.Core.CreateVariableRow(sourceLineNumbers, "LaunchWorkingFolder", launchWorkingDir, "string", false, 0);
                 }
 
                 if (!String.IsNullOrEmpty(licenseFile))

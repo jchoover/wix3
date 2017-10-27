@@ -808,6 +808,10 @@ extern "C" HRESULT CoreSaveEngineState(
     {
         hr = RegistrationSaveState(&pEngineState->registration, pbBuffer, cbBuffer);
         ExitOnFailure(hr, "Failed to save engine state.");
+
+        hr = RegistrationSaveSharedVariables(&pEngineState->registration, &pEngineState->variables);
+        ExitOnFailure(hr, "Failed to save shared variables.");
+
     }
 
 LExit:

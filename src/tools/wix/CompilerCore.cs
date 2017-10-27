@@ -712,7 +712,7 @@ namespace Microsoft.Tools.WindowsInstallerXml
         /// Creates a (bundle) Variable row in the active section.
         /// </summary>
         /// <param name="sourceLineNumbers">Source and line number of current row.</param>
-        public void CreateVariableRow(SourceLineNumberCollection sourceLineNumbers, string name, string value, string type, bool hidden, bool persisted)
+        public void CreateVariableRow(SourceLineNumberCollection sourceLineNumbers, string name, string value, string type, bool hidden, int persisted)
         {
             VariableRow variableRow = (VariableRow)this.CreateRow(sourceLineNumbers, "Variable");
             variableRow.Id = name;

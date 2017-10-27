@@ -394,7 +394,7 @@ public: // IBootstrapperApplication
 
 
     virtual STDMETHODIMP_(int) OnPlanRelatedBundle(
-        __in_z LPCWSTR /*wzBundleId*/,
+        __in_z LPCWSTR wzBundleId,
         __inout_z BOOTSTRAPPER_REQUEST_STATE* pRequestedState
         )
     {
@@ -402,6 +402,11 @@ public: // IBootstrapperApplication
         if (m_fPrereq)
         {
             *pRequestedState = BOOTSTRAPPER_REQUEST_STATE_NONE;
+        }
+        // Call BAF here to to see if we need to modify state.
+        if (NULL != m_pBAFunction)
+        {
+            m_pBAFunction->OnPlanRelatedBundle(wzBundleId, pRequestedState);
         }
 
         return CheckCanceled() ? IDCANCEL : IDOK;

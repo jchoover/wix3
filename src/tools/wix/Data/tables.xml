@@ -1798,7 +1798,7 @@
         <columnDefinition name="Value" type="string" length="0" nullable="yes" />
         <columnDefinition name="Type" type="string" length="0" nullable="yes" />
         <columnDefinition name="Hidden" type="number" length="2" minValue="0" maxValue="1"/>
-        <columnDefinition name="Persisted" type="number" length="2" minValue="0" maxValue="1"/>
+        <columnDefinition name="Persisted" type="number" length="2" minValue="0" maxValue="2"/>
     </tableDefinition>
     <tableDefinition name="WixBundleProperties" unreal="yes" bootstrapperApplicationData="yes">
         <columnDefinition name="DisplayName" type="string" length="0" nullable="yes"/>

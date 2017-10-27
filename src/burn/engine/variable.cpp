@@ -10,7 +10,7 @@ typedef const struct _BUILT_IN_VARIABLE_DECLARATION
     LPCWSTR wzVariable;
     PFN_INITIALIZEVARIABLE pfnInitialize;
     DWORD_PTR dwpInitializeData;
-    BOOL fPersist;
+    BURN_VARIABLE_PERSISTED_TYPE persist;
     BOOL fOverridable;
 } BUILT_IN_VARIABLE_DECLARATION;
 
@@ -60,7 +60,7 @@ static HRESULT AddBuiltInVariable(
     __in LPCWSTR wzVariable,
     __in PFN_INITIALIZEVARIABLE pfnInitialize,
     __in DWORD_PTR dwpInitializeData,
-    __in BOOL fPersist,
+    __in BURN_VARIABLE_PERSISTED_TYPE persist,
     __in BOOL fOverridable
     );
 static HRESULT GetVariable(
@@ -84,6 +84,7 @@ static HRESULT SetVariableValue(
     __in BURN_VARIANT* pVariant,
     __in BOOL fLiteral,
     __in SET_VARIABLE setBuiltin,
+    __in BOOL shared,
     __in BOOL fLog
     );
 static HRESULT InitializeVariableVersionNT(
@@ -255,26 +256,26 @@ extern "C" HRESULT VariableInitialize(
         {L"VersionNT64", InitializeVariableVersionNT, OS_INFO_VARIABLE_VersionNT64},
         {L"WindowsFolder", InitializeVariableCsidlFolder, CSIDL_WINDOWS},
         {L"WindowsVolume", InitializeVariableWindowsVolumeFolder, 0},
-        {BURN_BUNDLE_ACTION, InitializeVariableNumeric, 0, FALSE, TRUE},
-        {BURN_BUNDLE_EXECUTE_PACKAGE_CACHE_FOLDER, InitializeVariableString, NULL, FALSE, TRUE},
-        {BURN_BUNDLE_EXECUTE_PACKAGE_ACTION, InitializeVariableString, NULL, FALSE, TRUE},
-        {BURN_BUNDLE_FORCED_RESTART_PACKAGE, InitializeVariableString, NULL, TRUE, TRUE},
-        {BURN_BUNDLE_INSTALLED, InitializeVariableNumeric, 0, FALSE, TRUE},
-        {BURN_BUNDLE_ELEVATED, InitializeVariableNumeric, 0, FALSE, TRUE},
-        {BURN_BUNDLE_ACTIVE_PARENT, InitializeVariableString, NULL, FALSE, TRUE},
-        {BURN_BUNDLE_PROVIDER_KEY, InitializeVariableString, (DWORD_PTR)L"", FALSE, TRUE},
-        {BURN_BUNDLE_SOURCE_PROCESS_PATH, InitializeVariableString, NULL, FALSE, TRUE},
-        {BURN_BUNDLE_SOURCE_PROCESS_FOLDER, InitializeVariableString, NULL, FALSE, TRUE},
-        {BURN_BUNDLE_TAG, InitializeVariableString, (DWORD_PTR)L"", FALSE, TRUE},
-        {BURN_BUNDLE_UILEVEL, InitializeVariableNumeric, 0, FALSE, TRUE},
-        {BURN_BUNDLE_VERSION, InitializeVariableVersion, 0, FALSE, TRUE},
+        {BURN_BUNDLE_ACTION, InitializeVariableNumeric, 0, BURN_VARIABLE_PERSISTED_TYPE_NO, TRUE},
+        {BURN_BUNDLE_EXECUTE_PACKAGE_CACHE_FOLDER, InitializeVariableString, NULL, BURN_VARIABLE_PERSISTED_TYPE_NO, TRUE},
+        {BURN_BUNDLE_EXECUTE_PACKAGE_ACTION, InitializeVariableString, NULL, BURN_VARIABLE_PERSISTED_TYPE_NO, TRUE},
+        {BURN_BUNDLE_FORCED_RESTART_PACKAGE, InitializeVariableString, NULL, BURN_VARIABLE_PERSISTED_TYPE_YES, TRUE},
+        {BURN_BUNDLE_INSTALLED, InitializeVariableNumeric, 0, BURN_VARIABLE_PERSISTED_TYPE_NO, TRUE},
+        {BURN_BUNDLE_ELEVATED, InitializeVariableNumeric, 0, BURN_VARIABLE_PERSISTED_TYPE_NO, TRUE},
+        {BURN_BUNDLE_ACTIVE_PARENT, InitializeVariableString, NULL, BURN_VARIABLE_PERSISTED_TYPE_NO, TRUE},
+        {BURN_BUNDLE_PROVIDER_KEY, InitializeVariableString, (DWORD_PTR)L"", BURN_VARIABLE_PERSISTED_TYPE_NO, TRUE},
+        {BURN_BUNDLE_SOURCE_PROCESS_PATH, InitializeVariableString, NULL, BURN_VARIABLE_PERSISTED_TYPE_NO, TRUE},
+        {BURN_BUNDLE_SOURCE_PROCESS_FOLDER, InitializeVariableString, NULL, BURN_VARIABLE_PERSISTED_TYPE_NO, TRUE},
+        {BURN_BUNDLE_TAG, InitializeVariableString, (DWORD_PTR)L"", BURN_VARIABLE_PERSISTED_TYPE_NO, TRUE},
+        {BURN_BUNDLE_UILEVEL, InitializeVariableNumeric, 0, BURN_VARIABLE_PERSISTED_TYPE_NO, TRUE},
+        {BURN_BUNDLE_VERSION, InitializeVariableVersion, 0, BURN_VARIABLE_PERSISTED_TYPE_NO, TRUE},
     };
 
     for (DWORD i = 0; i < countof(vrgBuiltInVariables); ++i)
     {
         BUILT_IN_VARIABLE_DECLARATION* pBuiltInVariable = &vrgBuiltInVariables[i];
 
-        hr = AddBuiltInVariable(pVariables, pBuiltInVariable->wzVariable, pBuiltInVariable->pfnInitialize, pBuiltInVariable->dwpInitializeData, pBuiltInVariable->fPersist, pBuiltInVariable->fOverridable);
+        hr = AddBuiltInVariable(pVariables, pBuiltInVariable->wzVariable, pBuiltInVariable->pfnInitialize, pBuiltInVariable->dwpInitializeData, pBuiltInVariable->persist, pBuiltInVariable->fOverridable);
         ExitOnFailure(hr, "Failed to add built-in variable: %ls.", pBuiltInVariable->wzVariable);
     }
 
@@ -296,7 +297,8 @@ extern "C" HRESULT VariablesParseFromXml(
     BURN_VARIANT value = { };
     BURN_VARIANT_TYPE valueType = BURN_VARIANT_TYPE_NONE;
     BOOL fHidden = FALSE;
-    BOOL fPersisted = FALSE;
+    LPWSTR sczPersisted = NULL;
+    BURN_VARIABLE_PERSISTED_TYPE persisted = BURN_VARIABLE_PERSISTED_TYPE_NO;
     DWORD iVariable = 0;
 
     ::EnterCriticalSection(&pVariables->csAccess);
@@ -324,8 +326,27 @@ extern "C" HRESULT VariablesParseFromXml(
         ExitOnFailure(hr, "Failed to get @Hidden.");
 
         // @Persisted
-        hr = XmlGetYesNoAttribute(pixnNode, L"Persisted", &fPersisted);
+        // hr = XmlGetYesNoSharedAttribute(pixnNode, L"Persisted", &persisted);
+        hr = XmlGetAttributeEx(pixnNode, L"Persisted", &sczPersisted);
         ExitOnFailure(hr, "Failed to get @Persisted.");
+
+        if (CSTR_EQUAL == ::CompareStringW(LOCALE_INVARIANT, 0, sczPersisted, -1, L"shared", -1))
+        {
+            persisted = BURN_VARIABLE_PERSISTED_TYPE_SHARED;
+        }
+        else if (CSTR_EQUAL == ::CompareStringW(LOCALE_INVARIANT, 0, sczPersisted, -1, L"yes", -1))
+        {
+            persisted = BURN_VARIABLE_PERSISTED_TYPE_YES;
+        }
+        else if (CSTR_EQUAL == ::CompareStringW(LOCALE_INVARIANT, 0, sczPersisted, -1, L"no", -1))
+        {
+            persisted = BURN_VARIABLE_PERSISTED_TYPE_NO;
+        }
+        else
+        {
+            hr = E_UNEXPECTED;
+            ExitOnRootFailure(hr, "Invalid persisted type: %ls", sczPersisted);
+        }
 
         // @Value
         hr = XmlGetAttributeEx(pixnNode, L"Value", &scz);
@@ -400,7 +421,7 @@ extern "C" HRESULT VariablesParseFromXml(
             ExitOnRootFailure(hr, "Attempt to set built-in variable value: %ls", sczId);
         }
         pVariables->rgVariables[iVariable].fHidden = fHidden;
-        pVariables->rgVariables[iVariable].fPersisted = fPersisted;
+        pVariables->rgVariables[iVariable].persisted = persisted;
 
         // update variable value
         hr = BVariantSetValue(&pVariables->rgVariables[iVariable].Value, &value);
@@ -420,6 +441,7 @@ LExit:
 
     ReleaseObject(pixnNodes);
     ReleaseObject(pixnNode);
+    ReleaseStr(sczPersisted);
     ReleaseStr(scz);
     ReleaseStr(sczId);
     BVariantUninitialize(&value);
@@ -672,7 +694,7 @@ extern "C" HRESULT VariableSetNumeric(
     variant.llValue = llValue;
     variant.Type = BURN_VARIANT_TYPE_NUMERIC;
 
-    return SetVariableValue(pVariables, wzVariable, &variant, FALSE, fOverwriteBuiltIn ? SET_VARIABLE_OVERRIDE_BUILTIN : SET_VARIABLE_NOT_BUILTIN, TRUE);
+    return SetVariableValue(pVariables, wzVariable, &variant, FALSE, fOverwriteBuiltIn ? SET_VARIABLE_OVERRIDE_BUILTIN : SET_VARIABLE_NOT_BUILTIN, FALSE, TRUE);
 }
 
 extern "C" HRESULT VariableSetLiteralString(
@@ -688,7 +710,7 @@ extern "C" HRESULT VariableSetLiteralString(
     variant.sczValue = (LPWSTR)wzValue;
     variant.Type = BURN_VARIANT_TYPE_STRING;
 
-    return SetVariableValue(pVariables, wzVariable, &variant, TRUE, fOverwriteBuiltIn ? SET_VARIABLE_OVERRIDE_BUILTIN : SET_VARIABLE_NOT_BUILTIN, TRUE);
+    return SetVariableValue(pVariables, wzVariable, &variant, TRUE, fOverwriteBuiltIn ? SET_VARIABLE_OVERRIDE_BUILTIN : SET_VARIABLE_NOT_BUILTIN, FALSE, TRUE);
 }
 
 extern "C" HRESULT VariableSetString(
@@ -704,7 +726,7 @@ extern "C" HRESULT VariableSetString(
     variant.sczValue = (LPWSTR)wzValue;
     variant.Type = BURN_VARIANT_TYPE_STRING;
 
-    return SetVariableValue(pVariables, wzVariable, &variant, FALSE, fOverwriteBuiltIn ? SET_VARIABLE_OVERRIDE_BUILTIN : SET_VARIABLE_NOT_BUILTIN, TRUE);
+    return SetVariableValue(pVariables, wzVariable, &variant, FALSE, fOverwriteBuiltIn ? SET_VARIABLE_OVERRIDE_BUILTIN : SET_VARIABLE_NOT_BUILTIN, FALSE, TRUE);
 }
 
 extern "C" HRESULT VariableSetVersion(
@@ -720,7 +742,7 @@ extern "C" HRESULT VariableSetVersion(
     variant.qwValue = qwValue;
     variant.Type = BURN_VARIANT_TYPE_VERSION;
 
-    return SetVariableValue(pVariables, wzVariable, &variant, FALSE, fOverwriteBuiltIn ? SET_VARIABLE_OVERRIDE_BUILTIN : SET_VARIABLE_NOT_BUILTIN, TRUE);
+    return SetVariableValue(pVariables, wzVariable, &variant, FALSE, fOverwriteBuiltIn ? SET_VARIABLE_OVERRIDE_BUILTIN : SET_VARIABLE_NOT_BUILTIN, FALSE, TRUE);
 }
 
 extern "C" HRESULT VariableSetLiteralVariant(
@@ -729,7 +751,7 @@ extern "C" HRESULT VariableSetLiteralVariant(
     __in BURN_VARIANT* pVariant
     )
 {
-    return SetVariableValue(pVariables, wzVariable, pVariant, TRUE, SET_VARIABLE_NOT_BUILTIN, TRUE);
+    return SetVariableValue(pVariables, wzVariable, pVariant, TRUE, SET_VARIABLE_NOT_BUILTIN, FALSE, TRUE);
 }
 
 // The contents of psczOut may be sensitive, should keep encrypted and SecureZeroFree
@@ -835,7 +857,7 @@ extern "C" HRESULT VariableSerialize(
         // If we aren't persisting, include only variables that aren't rejected by the elevated process.
         // If we are persisting, include only variables that should be persisted.
         fIncluded = (!fPersisting && BURN_VARIABLE_INTERNAL_TYPE_BUILTIN != pVariable->internalType) ||
-                    (fPersisting && pVariable->fPersisted);
+                    (fPersisting && (BURN_VARIABLE_PERSISTED_TYPE_NO != pVariable->persisted));
 
         // Write included flag.
         hr = BuffWriteNumber(ppbBuffer, piBuffer, (DWORD)fIncluded);
@@ -894,6 +916,10 @@ extern "C" HRESULT VariableSerialize(
         // Write literal flag.
         hr = BuffWriteNumber(ppbBuffer, piBuffer, (DWORD)pVariable->fLiteral);
         ExitOnFailure(hr, "Failed to write literal flag.");
+
+        // Write variable persisted.
+        hr = BuffWriteNumber(ppbBuffer, piBuffer, (DWORD)pVariable->persisted);
+        ExitOnFailure(hr, "Failed to write variable persisted.");
     }
 
 LExit:
@@ -918,6 +944,7 @@ extern "C" HRESULT VariableDeserialize(
     LPWSTR sczName = NULL;
     BOOL fIncluded = FALSE;
     BOOL fLiteral = FALSE;
+    BURN_VARIABLE_PERSISTED_TYPE persisted = BURN_VARIABLE_PERSISTED_TYPE_NO;
     BURN_VARIANT value = { };
     LPWSTR scz = NULL;
     DWORD64 qw = 0;
@@ -989,8 +1016,12 @@ extern "C" HRESULT VariableDeserialize(
         hr = BuffReadNumber(pbBuffer, cbBuffer, piBuffer, (DWORD*)&fLiteral);
         ExitOnFailure(hr, "Failed to read variable literal flag.");
 
+        // Read variable literal flag.
+        hr = BuffReadNumber(pbBuffer, cbBuffer, piBuffer, (DWORD*)&persisted);
+        ExitOnFailure(hr, "Failed to read variable persisted state.");
+
         // Set variable.
-        hr = SetVariableValue(pVariables, sczName, &value, fLiteral, fWasPersisted ? SET_VARIABLE_OVERRIDE_PERSISTED_BUILTINS : SET_VARIABLE_ANY, FALSE);
+        hr = SetVariableValue(pVariables, sczName, &value, fLiteral, fWasPersisted ? SET_VARIABLE_OVERRIDE_PERSISTED_BUILTINS : SET_VARIABLE_ANY, (BURN_VARIABLE_PERSISTED_TYPE_SHARED == persisted), FALSE);
         ExitOnFailure(hr, "Failed to set variable.");
 
         // Clean up.
@@ -1348,7 +1379,7 @@ static HRESULT AddBuiltInVariable(
     __in LPCWSTR wzVariable,
     __in PFN_INITIALIZEVARIABLE pfnInitialize,
     __in DWORD_PTR dwpInitializeData,
-    __in BOOL fPersist,
+    __in BURN_VARIABLE_PERSISTED_TYPE persist,
     __in BOOL fOverridable
     )
 {
@@ -1368,7 +1399,7 @@ static HRESULT AddBuiltInVariable(
 
     // set variable values
     pVariable = &pVariables->rgVariables[iVariable];
-    pVariable->fPersisted = fPersist;
+    pVariable->persisted = persist;
     pVariable->internalType = fOverridable ? BURN_VARIABLE_INTERNAL_TYPE_OVERRIDABLE_BUILTIN : BURN_VARIABLE_INTERNAL_TYPE_BUILTIN;
     pVariable->pfnInitialize = pfnInitialize;
     pVariable->dwpInitializeData = dwpInitializeData;
@@ -1516,6 +1547,7 @@ static HRESULT SetVariableValue(
     __in BURN_VARIANT* pVariant,
     __in BOOL fLiteral,
     __in SET_VARIABLE setBuiltin,
+    __in BOOL shared,
     __in BOOL fLog
     )
 {
@@ -1536,7 +1568,7 @@ static HRESULT SetVariableValue(
     else if (BURN_VARIABLE_INTERNAL_TYPE_NORMAL < pVariables->rgVariables[iVariable].internalType) // built-in variables must be overridden.
     {
         if (SET_VARIABLE_OVERRIDE_BUILTIN == setBuiltin ||
-            (SET_VARIABLE_OVERRIDE_PERSISTED_BUILTINS == setBuiltin && pVariables->rgVariables[iVariable].fPersisted) ||
+            (SET_VARIABLE_OVERRIDE_PERSISTED_BUILTINS == setBuiltin && (BURN_VARIABLE_PERSISTED_TYPE_NO != pVariables->rgVariables[iVariable].persisted)) ||
             SET_VARIABLE_ANY == setBuiltin && BURN_VARIABLE_INTERNAL_TYPE_BUILTIN != pVariables->rgVariables[iVariable].internalType)
         {
             hr = S_OK;
@@ -1603,7 +1635,12 @@ static HRESULT SetVariableValue(
     ExitOnFailure(hr, "Failed to set value of variable: %ls", wzVariable);
 
     // Update variable literal flag.
-    pVariables->rgVariables[iVariable].fLiteral = fLiteral;
+    pVariables->rgVariables[iVariable].fLiteral = fLiteral; 
+
+    if (shared)
+    {
+        pVariables->rgVariables[iVariable].persisted = BURN_VARIABLE_PERSISTED_TYPE_SHARED;
+    }
 
 LExit:
     ::LeaveCriticalSection(&pVariables->csAccess);

@@ -22487,7 +22487,7 @@ namespace Microsoft.Tools.WindowsInstallerXml
             SourceLineNumberCollection sourceLineNumbers = Preprocessor.GetSourceLineNumbers(node);
             bool hidden = false;
             string name = null;
-            bool persisted = false;
+            int persisted = 0;
             string value = null;
             string type = null;
 
@@ -22507,9 +22507,21 @@ namespace Microsoft.Tools.WindowsInstallerXml
                             name = this.core.GetAttributeBundleVariableValue(sourceLineNumbers, attrib);
                             break;
                         case "Persisted":
-                            if (YesNoType.Yes == this.core.GetAttributeYesNoValue(sourceLineNumbers, attrib))
+                            string persistedValue = this.core.GetAttributeValue(sourceLineNumbers, attrib);
+                            switch (persistedValue)
                             {
-                                persisted = true;
+                                case "shared":
+                                    persisted = 2;
+                                    break;
+                                case "yes":
+                                    persisted = 1;
+                                    break;
+                                case "no":
+                                    persisted = 0;
+                                    break;
+                                default:
+                                    this.core.OnMessage(WixErrors.IllegalAttributeValue(sourceLineNumbers, node.LocalName, attrib.Name, persistedValue, "shared", "yes", "no"));
+                                    break;
                             }
                             break;
                         case "Value":

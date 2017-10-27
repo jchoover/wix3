@@ -33,6 +33,7 @@ const LPCWSTR REGISTRY_BUNDLE_VERSION_MAJOR = L"VersionMajor";
 const LPCWSTR REGISTRY_BUNDLE_VERSION_MINOR = L"VersionMinor";
 
 const LPCWSTR SWIDTAG_FOLDER = L"swidtag";
+const LPCWSTR REGISTRY_BUNDLE_SHARED_VARIABLE_KEY = L"shared";
 
 // internal function declarations
 
@@ -876,6 +877,7 @@ extern "C" HRESULT RegistrationSessionEnd(
 {
     HRESULT hr = S_OK;
     LPWSTR sczRebootRequiredKey = NULL;
+    LPWSTR sczVariableKey = NULL;
     HKEY hkRebootRequired = NULL;
     HKEY hkRegistration = NULL;
 
@@ -923,6 +925,17 @@ extern "C" HRESULT RegistrationSessionEnd(
 
         RemoveSoftwareTags(pVariables, &pRegistration->softwareTags);
 
+        // build variable registry key path
+        hr = StrAllocFormatted(&sczVariableKey, L"%s\\%s", pRegistration->sczRegistrationKey, REGISTRY_BUNDLE_SHARED_VARIABLE_KEY);
+        ExitOnFailure(hr, "Failed to build variable registry key path.");
+
+        // Delete registration variable key.
+        hr = RegDelete(pRegistration->hkRoot, sczVariableKey, REG_KEY_DEFAULT, FALSE);
+        if (E_FILENOTFOUND != hr)
+        {
+            ExitOnFailure(hr, "Failed to delete registration variable key: %ls", sczVariableKey);
+        }
+
         // Delete registration key.
         hr = RegDelete(pRegistration->hkRoot, pRegistration->sczRegistrationKey, REG_KEY_DEFAULT, FALSE);
         if (E_FILENOTFOUND != hr)
@@ -947,6 +960,7 @@ LExit:
     ReleaseRegKey(hkRegistration);
     ReleaseRegKey(hkRebootRequired);
     ReleaseStr(sczRebootRequiredKey);
+    ReleaseStr(sczVariableKey);
 
     return hr;
 }
@@ -972,7 +986,89 @@ extern "C" HRESULT RegistrationSaveState(
     }
     ExitOnFailure(hr, "Failed to write state to file: %ls", pRegistration->sczStateFile);
 
+    // TODO: Parse state data to pull out the shared variables and plunk them in the registry.
+
 LExit:
+    return hr;
+}
+
+extern "C" HRESULT RegistrationSaveSharedVariables(
+    __in BURN_REGISTRATION* pRegistration,
+    __in BURN_VARIABLES* pVariables
+)
+{
+    HRESULT hr = S_OK;
+    HKEY hkRegistration = NULL;
+    LONGLONG ll = 0;
+    LPWSTR scz = NULL;
+    DWORD64 qw = 0;
+    LPWSTR sczVariableKey = NULL;
+
+
+    if (pVariables->rgVariables)
+    {
+        // build variable registry key path
+        hr = StrAllocFormatted(&sczVariableKey , L"%s\\%s", pRegistration->sczRegistrationKey, REGISTRY_BUNDLE_SHARED_VARIABLE_KEY);
+        ExitOnFailure(hr, "Failed to build variable registry key path.");
+
+        // create registration key
+        hr = RegCreate(pRegistration->hkRoot, sczVariableKey, KEY_WRITE, &hkRegistration);
+        ExitOnFailure(hr, "Failed to create registration variable key.");
+
+
+        for (DWORD i = 0; i < pVariables->cVariables; ++i)
+        {
+            BURN_VARIABLE* pVariable = &pVariables->rgVariables[i];
+
+            if (BURN_VARIABLE_PERSISTED_TYPE_SHARED == pVariable->persisted)
+            {
+                // Write variable value.
+                switch (pVariable->Value.Type)
+                {
+                case BURN_VARIANT_TYPE_NONE:
+                    break;
+                case BURN_VARIANT_TYPE_NUMERIC:
+                    hr = BVariantGetNumeric(&pVariable->Value, &ll);
+                    ExitOnFailure(hr, "Failed to get numeric.");
+
+                    hr = RegWriteQword(hkRegistration, pVariable->sczName, ll);
+                    ExitOnFailure(hr, "Failed to write %ls value.", pVariable->sczName);
+                    // Write
+                    SecureZeroMemory(&ll, sizeof(ll));
+                    break;
+                case BURN_VARIANT_TYPE_VERSION:
+                    hr = BVariantGetVersion(&pVariable->Value, &qw);
+                    ExitOnFailure(hr, "Failed to get version.");
+
+                    hr = RegWriteQword(hkRegistration, pVariable->sczName, qw);
+                    ExitOnFailure(hr, "Failed to write %ls value.", pVariable->sczName);
+
+                    SecureZeroMemory(&qw, sizeof(qw));
+                    break;
+                case BURN_VARIANT_TYPE_STRING:
+                    hr = BVariantGetString(&pVariable->Value, &scz);
+                    ExitOnFailure(hr, "Failed to get string.");
+                    
+                    hr = RegWriteString(hkRegistration, pVariable->sczName, scz);
+                    ExitOnFailure(hr, "Failed to write %ls value.", pVariable->sczName);
+
+                    ReleaseNullStrSecure(scz);
+                    break;
+                default:
+                    hr = E_INVALIDARG;
+                    ExitOnFailure(hr, "Unsupported variable type.");
+                }
+
+
+
+            }
+        }
+    }
+LExit:
+    ReleaseRegKey(hkRegistration);
+    SecureZeroMemory(&ll, sizeof(ll));
+    SecureZeroMemory(&qw, sizeof(qw));
+    StrSecureZeroFreeString(scz);
     return hr;
 }
 

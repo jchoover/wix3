@@ -63,6 +63,8 @@ typedef struct _BURN_RELATED_BUNDLE
     LPWSTR sczTag;
 
     BURN_PACKAGE package;
+
+    BURN_VARIABLES* pVariables;
 } BURN_RELATED_BUNDLE;
 
 typedef struct _BURN_RELATED_BUNDLES
@@ -200,6 +202,10 @@ HRESULT RegistrationSaveState(
     __in_bcount_opt(cbBuffer) BYTE* pbBuffer,
     __in_opt DWORD cbBuffer
     );
+HRESULT RegistrationSaveSharedVariables(
+    __in BURN_REGISTRATION* pRegistration,
+    __in BURN_VARIABLES* pVariables
+);
 HRESULT RegistrationLoadState(
     __in BURN_REGISTRATION* pRegistration,
     __out_bcount(*pcbBuffer) BYTE** ppbBuffer,

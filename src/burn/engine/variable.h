@@ -32,6 +32,13 @@ enum BURN_VARIABLE_INTERNAL_TYPE
     BURN_VARIABLE_INTERNAL_TYPE_BUILTIN, // the BA can't set this variable, and the unelevated process can't serialize it to the elevated process.
 };
 
+enum BURN_VARIABLE_PERSISTED_TYPE
+{
+    BURN_VARIABLE_PERSISTED_TYPE_NO, // Not persisted
+    BURN_VARIABLE_PERSISTED_TYPE_YES, // Persisted
+    BURN_VARIABLE_PERSISTED_TYPE_SHARED, // Persisted and shared
+};
+
 
 // structs
 
@@ -41,7 +48,7 @@ typedef struct _BURN_VARIABLE
     BURN_VARIANT Value;
     BOOL fHidden;    
     BOOL fLiteral; // if fLiteral, then when formatting this variable its value should be used as is (don't continue recursively formatting).
-    BOOL fPersisted;
+    BURN_VARIABLE_PERSISTED_TYPE persisted;
 
     // used for late initialization of built-in variables
     BURN_VARIABLE_INTERNAL_TYPE internalType;
