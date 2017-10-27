@@ -3219,22 +3219,22 @@ namespace Microsoft.Tools.WindowsInstallerXml
             VariableRow bundleNameWellKnownVariable = (VariableRow)variableTable.CreateRow(null);
             bundleNameWellKnownVariable.Id = Binder.BURN_BUNDLE_NAME;
             bundleNameWellKnownVariable.Hidden = false;
-            bundleNameWellKnownVariable.Persisted = true;
+            bundleNameWellKnownVariable.Persisted = 1;
 
             VariableRow bundleOriginalSourceWellKnownVariable = (VariableRow)variableTable.CreateRow(null);
             bundleOriginalSourceWellKnownVariable.Id = Binder.BURN_BUNDLE_ORIGINAL_SOURCE;
             bundleOriginalSourceWellKnownVariable.Hidden = false;
-            bundleOriginalSourceWellKnownVariable.Persisted = true;
+            bundleOriginalSourceWellKnownVariable.Persisted = 1;
 
             VariableRow bundleOriginalSourceFolderWellKnownVariable = (VariableRow)variableTable.CreateRow(null);
             bundleOriginalSourceFolderWellKnownVariable.Id = Binder.BURN_BUNDLE_ORIGINAL_SOURCE_FOLDER;
             bundleOriginalSourceFolderWellKnownVariable.Hidden = false;
-            bundleOriginalSourceFolderWellKnownVariable.Persisted = true;
+            bundleOriginalSourceFolderWellKnownVariable.Persisted = 1;
 
             VariableRow bundleLastUsedSourceWellKnownVariable = (VariableRow)variableTable.CreateRow(null);
             bundleLastUsedSourceWellKnownVariable.Id = Binder.BURN_BUNDLE_LAST_USED_SOURCE;
             bundleLastUsedSourceWellKnownVariable.Hidden = false;
-            bundleLastUsedSourceWellKnownVariable.Persisted = true;
+            bundleLastUsedSourceWellKnownVariable.Persisted = 1;
 
             // To make lookups easier, we load the variable table bottom-up, so
             // that we can index by ID.

@@ -41,7 +41,7 @@ namespace Microsoft.Tools.WindowsInstallerXml
         /// Gets or sets whether this variable is persisted.
         /// </summary>
         /// <value>Whether this variable is persisted.</value>
-        public bool Persisted
+        public int Persisted
         {
             get { return this.variableRow.Persisted; }
             private set { this.variableRow.Persisted = value; }
@@ -81,7 +81,20 @@ namespace Microsoft.Tools.WindowsInstallerXml
                 writer.WriteAttributeString("Type", this.Type);
             }
             writer.WriteAttributeString("Hidden", this.Hidden ? "yes" : "no");
-            writer.WriteAttributeString("Persisted", this.Persisted ? "yes" : "no");
+
+            if (0 == this.Persisted)
+            {
+                writer.WriteAttributeString("Persisted", "no");
+            }
+            else if (1 == this.Persisted)
+            {
+                writer.WriteAttributeString("Persisted", "yes");
+            }
+            else if (2 == this.Persisted)
+            {
+                writer.WriteAttributeString("Persisted", "shared");
+            }
+            
             writer.WriteEndElement();
         }
     }

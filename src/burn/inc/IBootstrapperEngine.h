@@ -218,4 +218,23 @@ DECLARE_INTERFACE_IID_(IBootstrapperEngine, IUnknown, "6480D616-27A0-44D7-905B-8
         __in_z_opt LPCWSTR wzArguments,
         __in DWORD dwWaitForInputIdleTimeout
         ) = 0;
+
+    STDMETHOD(GetRelatedBundleVariableNumeric)(
+        __in_z LPCWSTR wzBundleId,
+        __in_z LPCWSTR wzVariable,
+        __out LONGLONG* pllValue
+        ) = 0;
+
+    STDMETHOD(GetRelatedBundleVariableString)(
+        __in_z LPCWSTR wzBundleId,
+        __in_z LPCWSTR wzVariable,
+        __out_ecount_opt(*pcchValue) LPWSTR wzValue,
+        __inout DWORD* pcchValue
+        ) = 0;
+
+    STDMETHOD(GetRelatedBundleVariableVersion)(
+        __in_z LPCWSTR wzBundleId,
+        __in_z LPCWSTR wzVariable,
+        __out DWORD64* pqwValue
+        ) = 0;
 };

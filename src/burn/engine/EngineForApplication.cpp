@@ -159,6 +159,121 @@ public: // IBootstrapperEngine
         return hr;
     }
 
+    /*
+    HRESULT LoadVariablesForRelatedBundle(__in_z LPCWSTR wzBundleId)
+    {
+        HRESULT hr = S_OK;
+
+        BURN_REGISTRATION* pRegistration = &m_pEngineState->registration;
+        for (DWORD iRelatedBundle = 0; iRelatedBundle < pRegistration->relatedBundles.cRelatedBundles; ++iRelatedBundle)
+        {
+            BURN_RELATED_BUNDLE* pRelatedBundle = pRegistration->relatedBundles.rgRelatedBundles + iRelatedBundle;
+            if (CSTR_EQUAL == ::CompareStringW(LOCALE_NEUTRAL, NORM_IGNORECASE, wzBundleId, -1, pRelatedBundle->package.sczId, -1))
+            {
+                
+                if (NULL == pRelatedBundle->pVariables)
+                {
+
+                }
+                
+                break;
+            }
+        }
+
+        return hr;
+    }
+    */
+
+    // The contents of pllValue may be sensitive, if variable is hidden should keep value encrypted and SecureZeroMemory.
+    virtual STDMETHODIMP GetRelatedBundleVariableNumeric(
+        __in_z LPCWSTR /*wzBundleId*/,
+        __in_z LPCWSTR wzVariable,
+        __out LONGLONG* pllValue
+    )
+    {
+        HRESULT hr = S_OK;
+
+
+
+        if (wzVariable && *wzVariable && pllValue)
+        {
+            hr = VariableGetNumeric(&m_pEngineState->variables, wzVariable, pllValue);
+        }
+        else
+        {
+            hr = E_INVALIDARG;
+        }
+
+        return hr;
+    }
+
+    // The contents of wzValue may be sensitive, if variable is hidden should keep value encrypted and SecureZeroFree.
+    virtual STDMETHODIMP GetRelatedBundleVariableString(
+        __in_z LPCWSTR /*wzBundleId*/,
+        __in_z LPCWSTR wzVariable,
+        __out_ecount_opt(*pcchValue) LPWSTR wzValue,
+        __inout DWORD* pcchValue
+    )
+    {
+        HRESULT hr = S_OK;
+        LPWSTR sczValue = NULL;
+        size_t cchRemaining = 0;
+
+        if (wzVariable && *wzVariable && pcchValue)
+        {
+            hr = VariableGetString(&m_pEngineState->variables, wzVariable, &sczValue);
+            if (SUCCEEDED(hr))
+            {
+                if (wzValue)
+                {
+                    hr = ::StringCchCopyExW(wzValue, *pcchValue, sczValue, NULL, &cchRemaining, STRSAFE_FILL_BEHIND_NULL);
+                    if (STRSAFE_E_INSUFFICIENT_BUFFER == hr)
+                    {
+                        hr = E_MOREDATA;
+
+                        ::StringCchLengthW(sczValue, STRSAFE_MAX_CCH, &cchRemaining);
+                        *pcchValue = cchRemaining + 1;
+                    }
+                }
+                else
+                {
+                    hr = E_MOREDATA;
+
+                    ::StringCchLengthW(sczValue, STRSAFE_MAX_CCH, &cchRemaining);
+                    *pcchValue = cchRemaining + 1;
+                }
+            }
+        }
+        else
+        {
+            hr = E_INVALIDARG;
+        }
+
+        StrSecureZeroFreeString(sczValue);
+        return hr;
+    }
+
+    // The contents of wzValue may be sensitive, if variable is hidden should keep value encrypted and SecureZeroMemory.
+    virtual STDMETHODIMP GetRelatedBundleVariableVersion(
+        __in_z LPCWSTR /*wzBundleId*/,
+        __in_z LPCWSTR wzVariable,
+        __out DWORD64* pqwValue
+    )
+    {
+        HRESULT hr = S_OK;
+
+        if (wzVariable && *wzVariable && pqwValue)
+        {
+            hr = VariableGetVersion(&m_pEngineState->variables, wzVariable, pqwValue);
+        }
+        else
+        {
+            hr = E_INVALIDARG;
+        }
+
+        return hr;
+    }
+
     // The contents of wzOut may be sensitive, should keep encrypted and SecureZeroFree.
     virtual STDMETHODIMP FormatString(
         __in_z LPCWSTR wzIn,

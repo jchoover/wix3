@@ -1796,12 +1796,28 @@ static HRESULT OnSaveState(
     )
 {
     HRESULT hr = S_OK;
+    SIZE_T iData = 0;
+    BURN_VARIABLES variables = {};
 
     // save state in per-machine process
     hr = RegistrationSaveState(pRegistration, pbData, cbData);
     ExitOnFailure(hr, "Failed to save state.");
 
+    hr = VariableInitialize(&variables);
+    ExitOnFailure(hr, "Failed to initialize variables.");
+
+    hr = VariableDeserialize(&variables, TRUE, pbData, cbData, &iData);
+    ExitOnFailure(hr, "Failed to Deserialize variables for persting shared variables.");
+
+#ifdef DEBUG
+    VariablesDump(&variables);
+#endif
+
+    hr = RegistrationSaveSharedVariables(pRegistration, &variables);
+    ExitOnFailure(hr, "Failed to save shared variables.");
+
 LExit:
+    VariablesUninitialize(&variables);
     return hr;
 }
 

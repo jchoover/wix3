@@ -770,7 +770,6 @@ LExit:
     return hr;
 }
 
-
 /********************************************************************
  RegWriteStringFormatted - writes a registry key value as a formatted string.
 

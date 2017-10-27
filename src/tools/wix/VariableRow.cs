@@ -54,10 +54,20 @@ namespace Microsoft.Tools.WindowsInstallerXml
         /// Gets or sets whether this variable is persisted.
         /// </summary>
         /// <value>Whether this variable is persisted.</value>
-        public bool Persisted
+        public int Persisted
         {
-            get { return 1 == (int)this.Fields[4].Data ? true : false; }
-            set { this.Fields[4].Data = value ? 1 : 0; }
+            get { return (null == this.Fields[4].Data) ? 0 : (int)this.Fields[4].Data; }
+            set { this.Fields[4].Data = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets whether this variable is shared.
+        /// </summary>
+        /// <value>Whether this variable is shared.</value>
+        public bool Shared
+        {
+            get { return 1 == (int)this.Fields[5].Data ? true : false; }
+            set { this.Fields[5].Data = value ? 1 : 0; }
         }
 
         /// <summary>
