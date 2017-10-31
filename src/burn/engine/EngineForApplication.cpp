@@ -159,32 +159,6 @@ public: // IBootstrapperEngine
         return hr;
     }
 
-    /*
-    HRESULT LoadVariablesForRelatedBundle(__in_z LPCWSTR wzBundleId)
-    {
-        HRESULT hr = S_OK;
-
-        BURN_REGISTRATION* pRegistration = &m_pEngineState->registration;
-        for (DWORD iRelatedBundle = 0; iRelatedBundle < pRegistration->relatedBundles.cRelatedBundles; ++iRelatedBundle)
-        {
-            BURN_RELATED_BUNDLE* pRelatedBundle = pRegistration->relatedBundles.rgRelatedBundles + iRelatedBundle;
-            if (CSTR_EQUAL == ::CompareStringW(LOCALE_NEUTRAL, NORM_IGNORECASE, wzBundleId, -1, pRelatedBundle->package.sczId, -1))
-            {
-                
-                if (NULL == pRelatedBundle->pVariables)
-                {
-
-                }
-                
-                break;
-            }
-        }
-
-        return hr;
-    }
-    */
-
-    // The contents of pllValue may be sensitive, if variable is hidden should keep value encrypted and SecureZeroMemory.
     virtual STDMETHODIMP GetRelatedBundleVariableNumeric(
         __in_z LPCWSTR wzBundleId,
         __in_z LPCWSTR wzVariable,
@@ -194,7 +168,7 @@ public: // IBootstrapperEngine
         HRESULT hr = S_OK;
         DWORD dwType = 0;
         LONGLONG llValue = 0;
-        DWORD dwRemaining = sizeof(DWORD64);
+        DWORD dwRemaining = sizeof(LONGLONG);
 
         if (wzVariable && *wzVariable && pllValue)
         {
@@ -205,7 +179,7 @@ public: // IBootstrapperEngine
             }
             if (REG_QWORD != dwType)
             {
-                ExitOnFailure(hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA), "Related bundle %ls shared variable %ls is of an invalid type.", wzBundleId, wzVariable);
+                ExitOnFailure(hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATATYPE), "Related bundle %ls shared variable %ls is of an invalid type.", wzBundleId, wzVariable);
             }
             *pllValue = llValue;
 
@@ -214,11 +188,10 @@ public: // IBootstrapperEngine
         {
             hr = E_INVALIDARG;
         }
-LExit:
+    LExit:
         return hr;
     }
 
-    // The contents of wzValue may be sensitive, if variable is hidden should keep value encrypted and SecureZeroFree.
     virtual STDMETHODIMP GetRelatedBundleVariableString(
         __in_z LPCWSTR wzBundleId,
         __in_z LPCWSTR wzVariable,
@@ -241,7 +214,7 @@ LExit:
             }
             if (REG_SZ != dwType)
             {
-                ExitOnFailure(hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA), "Related bundle %ls shared variable %ls is of an invalid type.", wzBundleId, wzVariable);
+                ExitOnFailure(hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATATYPE), "Related bundle %ls shared variable %ls is of an invalid type.", wzBundleId, wzVariable);
             }
 
             hr = StrAlloc(&sczValue, dwRemaining);
@@ -276,12 +249,11 @@ LExit:
         {
             hr = E_INVALIDARG;
         }
-LExit:
-        StrSecureZeroFreeString(sczValue);
+    LExit:
+        ReleaseStr(sczValue);
         return hr;
     }
 
-    // The contents of wzValue may be sensitive, if variable is hidden should keep value encrypted and SecureZeroMemory.
     virtual STDMETHODIMP GetRelatedBundleVariableVersion(
         __in_z LPCWSTR wzBundleId,
         __in_z LPCWSTR wzVariable,
@@ -302,7 +274,7 @@ LExit:
             }
             if (REG_QWORD != dwType)
             {
-                ExitOnFailure(hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA), "Related bundle %ls shared variable %ls is of an invalid type.", wzBundleId, wzVariable);
+                ExitOnFailure(hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATATYPE), "Related bundle %ls shared variable %ls is of an invalid type.", wzBundleId, wzVariable);
             }
             *pqwValue = dwValue;
         }

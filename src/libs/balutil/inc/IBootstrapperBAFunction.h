@@ -12,7 +12,7 @@ interface IBootstrapperBAFunction
     STDMETHOD(OnDetectComplete)() = 0;
     STDMETHOD(OnPlan)() = 0;
     STDMETHOD(OnPlanComplete)() = 0;
-	STDMETHOD(OnDetectRelatedBundle)(
+    STDMETHOD(OnDetectRelatedBundle)(
         __in LPCWSTR wzBundleId,
         __in BOOTSTRAPPER_RELATION_TYPE relationType,
         __in LPCWSTR /*wzBundleTag*/,
@@ -20,7 +20,7 @@ interface IBootstrapperBAFunction
         __in DWORD64 /*dw64Version*/,
         __in BOOTSTRAPPER_RELATED_OPERATION operation
         ) = 0;
-	STDMETHOD(OnPlanRelatedBundle)(__in_z LPCWSTR /*wzBundleId*/, __inout_z BOOTSTRAPPER_REQUEST_STATE* pRequestedState) = 0;
+    STDMETHOD(OnPlanRelatedBundle)(__in_z LPCWSTR /*wzBundleId*/, __inout_z BOOTSTRAPPER_REQUEST_STATE* pRequestedState) = 0;
 };
 
 #ifdef __cplusplus
