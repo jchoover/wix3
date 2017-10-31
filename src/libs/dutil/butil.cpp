@@ -145,7 +145,6 @@ extern "C" HRESULT DAPI BundleGetBundleSharedVariable(
     HKEY hkBundle = NULL;
     DWORD cbData = 0;
     DWORD dwType = 0;
-    DWORD dwValue = 0;
     DWORD64 qwValue = 0;
 
     if (!wzBundleId || !wzAttribute || (pvData && !pcbData))
