@@ -296,9 +296,9 @@ public: // IBootstrapperApplication
     virtual STDMETHODIMP_(int) OnDetectRelatedBundle(
         __in LPCWSTR wzBundleId,
         __in BOOTSTRAPPER_RELATION_TYPE relationType,
-        __in LPCWSTR /*wzBundleTag*/,
+        __in LPCWSTR wzBundleTag,
         __in BOOL fPerMachine,
-        __in DWORD64 /*dw64Version*/,
+        __in DWORD64 dw64Version,
         __in BOOTSTRAPPER_RELATED_OPERATION operation
         )
     {
@@ -308,6 +308,10 @@ public: // IBootstrapperApplication
         if (!m_fPrereq && BOOTSTRAPPER_RELATED_OPERATION_DOWNGRADE == operation)
         {
             m_fDowngrading = TRUE;
+        }
+        if (m_pBAFunction)
+        {
+            m_pBAFunction->OnDetectRelatedBundle(wzBundleId, relationType, wzBundleTag, fPerMachine, dw64Version, operation);
         }
 
         return CheckCanceled() ? IDCANCEL : IDOK;

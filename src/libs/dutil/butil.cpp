@@ -119,11 +119,13 @@ An invalid parameter was passed to the function.
 HRESULT_FROM_WIN32(ERROR_UNKNOWN_PRODUCT)
 The bundle is not installed
 HRESULT_FROM_WIN32(ERROR_UNKNOWN_PROPERTY)
-The property is unrecognized
+The shared variable is unrecognized
 HRESULT_FROM_WIN32(ERROR_MORE_DATA)
 A buffer is too small to hold the requested data.
+HRESULT_FROM_WIN32(ERROR_SUCCESS)
+When probing for a string variable, if no data pointer is passed but the size is and the variable is found. 
 E_NOTIMPL:
-Tried to read a bundle attribute for a type which has not been implemented
+Tried to read a bundle shared variable for a type which has not been implemented
 
 All other returns are unexpected returns from other dutil methods.
 ********************************************************************/
@@ -143,7 +145,6 @@ extern "C" HRESULT DAPI BundleGetBundleSharedVariable(
     HKEY hkBundle = NULL;
     DWORD cbData = 0;
     DWORD dwType = 0;
-    DWORD dwValue = 0;
     DWORD64 qwValue = 0;
 
     if (!wzBundleId || !wzAttribute || (pvData && !pcbData))
@@ -154,12 +155,12 @@ extern "C" HRESULT DAPI BundleGetBundleSharedVariable(
     if (FAILED(hr = OpenBundleKey(wzBundleId, context = BUNDLE_INSTALL_CONTEXT_MACHINE, REGISTRY_BUNDLE_SHARED_VARIABLE_KEY, &hkBundle)) &&
         FAILED(hr = OpenBundleKey(wzBundleId, context = BUNDLE_INSTALL_CONTEXT_USER, REGISTRY_BUNDLE_SHARED_VARIABLE_KEY, &hkBundle)))
     {
-        ExitOnFailure(E_FILENOTFOUND == hr ? HRESULT_FROM_WIN32(ERROR_UNKNOWN_PRODUCT) : hr, "Failed to locate bundle uninstall key path.");
+        ExitOnFailure(E_FILENOTFOUND == hr ? HRESULT_FROM_WIN32(ERROR_UNKNOWN_PRODUCT) : hr, "Failed to locate bundle uninstall key variable path.");
     }
 
-    // If the bundle doesn't have the property defined, return ERROR_UNKNOWN_PROPERTY
+    // If the bundle doesn't have the shared variable defined, return ERROR_UNKNOWN_PROPERTY
     hr = RegGetType(hkBundle, wzAttribute, &dwType);
-    ExitOnFailure(E_FILENOTFOUND == hr ? HRESULT_FROM_WIN32(ERROR_UNKNOWN_PROPERTY) : hr, "Failed to locate bundle property.");
+    ExitOnFailure(E_FILENOTFOUND == hr ? HRESULT_FROM_WIN32(ERROR_UNKNOWN_PROPERTY) : hr, "Failed to locate bundle shared variable.");
 
     if (pdwType)
     {
@@ -170,7 +171,7 @@ extern "C" HRESULT DAPI BundleGetBundleSharedVariable(
     {
     case REG_SZ:
         hr = RegReadString(hkBundle, wzAttribute, &sczValue);
-        ExitOnFailure(hr, "Failed to read string property.");
+        ExitOnFailure(hr, "Failed to read string shared variable.");
         
         if (pcbData)
         {
@@ -188,8 +189,8 @@ extern "C" HRESULT DAPI BundleGetBundleSharedVariable(
                     ExitOnFailure(hr = HRESULT_FROM_WIN32(ERROR_MORE_DATA), "A buffer is too small to hold the requested data.");
                 }
                 // Safe to copy
-                hr = ::StringCchCatNExW(reinterpret_cast<LPWSTR>(pvData), *pcbData, sczValue, cbData, NULL, NULL, STRSAFE_FILL_BEHIND_NULL);
-                ExitOnFailure(hr, "Failed to copy the property value to the output buffer.");
+                hr = ::StringCchCatNExW(*reinterpret_cast<LPWSTR*>(pvData), *pcbData, sczValue, cbData, NULL, NULL, STRSAFE_FILL_BEHIND_NULL);
+                ExitOnFailure(hr, "Failed to copy the shared variable value to the output buffer.");
 
                 *pcbData = cbData++;
             }
@@ -201,28 +202,9 @@ extern "C" HRESULT DAPI BundleGetBundleSharedVariable(
         }
 
         break;
-    case REG_DWORD:
-        hr = RegReadNumber(hkBundle, wzAttribute, &dwValue);
-        ExitOnFailure(hr, "Failed to read dword property.");
-
-        if (pcbData)
-        {
-            if (pvData)
-            {
-                if (*pcbData < sizeof(DWORD))
-                {
-                    *pcbData = sizeof(DWORD);
-                    ExitOnFailure(hr = HRESULT_FROM_WIN32(ERROR_MORE_DATA), "A buffer is too small to hold the requested data.");
-                }
-
-                *reinterpret_cast<LPDWORD>(pvData) = dwValue;
-                *pcbData = sizeof(DWORD);
-            }
-        }
-        break;
     case REG_QWORD:
         hr = RegReadQword(hkBundle, wzAttribute, &qwValue);
-        ExitOnFailure(hr, "Failed to read qword property.");
+        ExitOnFailure(hr, "Failed to read qword shared variable.");
 
         if (pcbData)
         {
@@ -231,36 +213,22 @@ extern "C" HRESULT DAPI BundleGetBundleSharedVariable(
                 if (*pcbData < sizeof(DWORD64))
                 {
                     *pcbData = sizeof(DWORD64);
-                    ExitOnFailure(hr = HRESULT_FROM_WIN32(ERROR_MORE_DATA), "A buffer is too small to hold the requested data.");
+                    ExitOnFailure(hr = HRESULT_FROM_WIN32(ERROR_MORE_DATA), "A numeric buffer is too small to hold the requested data.");
+                }
+                else if (*pcbData > sizeof(DWORD64))
+                {
+                    *pcbData = sizeof(DWORD64);
+                    ExitOnFailure(hr = E_INVALIDARG, "A numeric buffer is too large to hold the requested data.");
                 }
 
                 *reinterpret_cast<DWORD64*>(pvData) = qwValue;
-                *pcbData = sizeof(DWORD64);
             }
         }
         break;
     default:
-        ExitOnFailure1(hr = E_NOTIMPL, "Reading bundle info of type 0x%x not implemented.", dwType);
+        ExitOnFailure1(hr = E_NOTIMPL, "Reading bundle shared variable of type 0x%x not implemented.", dwType);
 
     }
-
-    //hr = ::StringCchLengthW(sczValue, STRSAFE_MAX_CCH, reinterpret_cast<UINT_PTR*>(&cchSource));
-    //ExitOnFailure(hr, "Failed to calculate length of string");
-
-    //if (lpValueBuf)
-    //{
-    //    // cchSource is the length of the string not including the terminating null character
-    //    if (*pcchValueBuf <= cchSource)
-    //    {
-    //        *pcchValueBuf = ++cchSource;
-    //        ExitOnFailure(hr = HRESULT_FROM_WIN32(ERROR_MORE_DATA), "A buffer is too small to hold the requested data.");
-    //    }
-
-    //    hr = ::StringCchCatNExW(lpValueBuf, *pcchValueBuf, sczValue, cchSource, NULL, NULL, STRSAFE_FILL_BEHIND_NULL);
-    //    ExitOnFailure(hr, "Failed to copy the property value to the output buffer.");
-
-    //    *pcchValueBuf = cchSource++;
-    //}
 
 LExit:
     ReleaseRegKey(hkBundle);

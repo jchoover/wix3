@@ -226,3 +226,59 @@ LExit:
     ReleaseStr(sczFormattedAnsi);
     return hr;
 }
+
+DAPI_(HRESULT) BalGetRelatedBundleStringVariable(
+    __in_z LPCWSTR wzBundleId,
+    __in_z LPCWSTR wzVariable,
+    __inout LPWSTR* psczValue
+)
+{
+    HRESULT hr = S_OK;
+    DWORD cch = 0;
+
+    if (!vpEngine)
+    {
+        hr = E_POINTER;
+        ExitOnRootFailure(hr, "BalInitialize() must be called first.");
+    }
+
+    if (*psczValue)
+    {
+        hr = StrMaxLength(*psczValue, reinterpret_cast<DWORD_PTR*>(&cch));
+        ExitOnFailure(hr, "Failed to determine length of value.");
+    }
+
+    hr = vpEngine->GetRelatedBundleVariableString(wzBundleId, wzVariable, *psczValue, &cch);
+    if (E_MOREDATA == hr)
+    {
+        ++cch;
+
+        hr = StrAllocSecure(psczValue, cch);
+        ExitOnFailure(hr, "Failed to allocate value.");
+
+        hr = vpEngine->GetRelatedBundleVariableString(wzBundleId, wzVariable, *psczValue, &cch);
+    }
+
+LExit:
+    return hr;
+}
+
+DAPI_(HRESULT) BalGetRelatedBundleNumericVariable(
+    __in_z LPCWSTR wzBundleId,
+    __in_z LPCWSTR wzVariable,
+    __out LONGLONG* pllValue
+)
+{
+    HRESULT hr = S_OK;
+
+    if (!vpEngine)
+    {
+        hr = E_POINTER;
+        ExitOnRootFailure(hr, "BalInitialize() must be called first.");
+    }
+
+    hr = vpEngine->GetRelatedBundleVariableNumeric(wzBundleId, wzVariable, pllValue);
+
+LExit:
+    return hr;
+}

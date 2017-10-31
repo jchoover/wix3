@@ -111,6 +111,26 @@ DAPIV_(HRESULT) BalLogError(
     ...
     );
 
+/*******************************************************************
+BalGetRelatedBundleStringVariable - gets a string from a shared variable via the engine.
+
+Note: Use StrFree() to release psczValue.
+********************************************************************/
+DAPI_(HRESULT) BalGetRelatedBundleStringVariable(
+    __in_z LPCWSTR wzBundleId,
+    __in_z LPCWSTR wzVariable,
+    __inout LPWSTR* psczValue
+);
+
+/*******************************************************************
+BalGetRelatedBundleNumericVariable - gets a number from a shared variable via the engine.
+********************************************************************/
+DAPI_(HRESULT) BalGetRelatedBundleNumericVariable(
+    __in_z LPCWSTR wzBundleId,
+    __in_z LPCWSTR wzVariable,
+    __out LONGLONG* pllValue
+);
+
 #ifdef __cplusplus
 }
 #endif

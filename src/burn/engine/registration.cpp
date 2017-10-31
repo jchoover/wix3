@@ -986,8 +986,6 @@ extern "C" HRESULT RegistrationSaveState(
     }
     ExitOnFailure(hr, "Failed to write state to file: %ls", pRegistration->sczStateFile);
 
-    // TODO: Parse state data to pull out the shared variables and plunk them in the registry.
-
 LExit:
     return hr;
 }
