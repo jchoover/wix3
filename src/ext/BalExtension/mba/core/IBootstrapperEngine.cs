@@ -143,6 +143,35 @@ namespace Microsoft.Tools.WindowsInstallerXml.Bootstrapper
             [MarshalAs(UnmanagedType.LPWStr)] string wzArguments,
             [MarshalAs(UnmanagedType.U4)] int dwWaitForInputIdleTimeout
             );
+
+        [PreserveSig]
+        int GetRelatedBundleVariableNumeric(
+            [MarshalAs(UnmanagedType.LPWStr)] string wzBundleId,
+            [MarshalAs(UnmanagedType.LPWStr)] string wzVariable,
+            out long pllValue
+            );
+
+        [PreserveSig]
+        int GetRelatedBundleVariableString(
+            [MarshalAs(UnmanagedType.LPWStr)] string wzBundleId,
+            [MarshalAs(UnmanagedType.LPWStr)] string wzVariable,
+                                              IntPtr wzValue,
+            [MarshalAs(UnmanagedType.U4)] ref int pcchValue
+            );
+
+        [PreserveSig]
+        int GetRelatedBundleVariableVersion(
+            [MarshalAs(UnmanagedType.LPWStr)] string wzBundleId,
+            [MarshalAs(UnmanagedType.LPWStr)] string wzVariable,
+            [MarshalAs(UnmanagedType.U8)] out long pqwValue
+            );
+
+        [PreserveSig]
+        int GetRelatedBundleVariableType(
+            [MarshalAs(UnmanagedType.LPWStr)] string wzBundleId,
+            [MarshalAs(UnmanagedType.LPWStr)] string wzVariable,
+            [MarshalAs(UnmanagedType.U4)] out long pdwType
+            );
     }
 
     /// <summary>

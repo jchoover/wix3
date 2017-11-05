@@ -43,6 +43,10 @@ HRESULT DAPI DictCompareStringListToArray(
     __in_ecount(cStringArray) const LPCWSTR* rgwzStringArray,
     __in const DWORD cStringArray
     );
+HRESULT DAPI DictDuplicateStringList(
+    __out_bcount(STRINGDICT_HANDLE_BYTES) STRINGDICT_HANDLE* psdHandle,
+    __in_bcount(STRINGDICT_HANDLE_BYTES) STRINGDICT_HANDLE sdStringList
+);
 HRESULT DAPI DictAddKey(
     __in_bcount(STRINGDICT_HANDLE_BYTES) STRINGDICT_HANDLE sdHandle,
     __in_z LPCWSTR szString

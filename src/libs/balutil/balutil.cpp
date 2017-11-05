@@ -282,3 +282,42 @@ DAPI_(HRESULT) BalGetRelatedBundleNumericVariable(
 LExit:
     return hr;
 }
+
+/*******************************************************************
+********************************************************************/
+DAPI_(HRESULT) BalSetNumericVariable(
+    __in_z LPCWSTR wzVariable,
+    __in LONGLONG llValue
+)
+{
+    HRESULT hr = S_OK;
+
+    if (!vpEngine)
+    {
+        hr = E_POINTER;
+        ExitOnRootFailure(hr, "BalInitialize() must be called first.");
+    }
+
+    hr = vpEngine->SetVariableNumeric(wzVariable, llValue);
+LExit:
+    return hr;
+}
+/*******************************************************************
+********************************************************************/
+DAPI_(HRESULT) BalSetStringVariable(
+    __in_z LPCWSTR wzVariable,
+    __in_z LPCWSTR wzValue
+)
+{
+    HRESULT hr = S_OK;
+
+    if (!vpEngine)
+    {
+        hr = E_POINTER;
+        ExitOnRootFailure(hr, "BalInitialize() must be called first.");
+    }
+
+    hr = vpEngine->SetVariableString(wzVariable, wzValue);
+LExit:
+    return hr;
+}

@@ -282,7 +282,41 @@ public: // IBootstrapperEngine
         {
             hr = E_INVALIDARG;
         }
-LExit:
+    LExit:
+        return hr;
+    }
+
+    virtual STDMETHODIMP GetRelatedBundleVariableType(
+        __in_z LPCWSTR wzBundleId,
+        __in_z LPCWSTR wzVariable,
+        __out DWORD* pdwType
+    )
+    {
+        HRESULT hr = S_OK;
+        DWORD dwType;
+
+        if (wzVariable && *wzVariable && pdwType)
+        {
+            hr = BundleGetBundleSharedVariable(wzBundleId, wzVariable, &dwType, NULL, NULL);
+            ExitOnFailure(hr, "Unable to read related bundle %ls shared variable %ls", wzBundleId, wzVariable);
+ 
+            switch (dwType)
+            {
+                case REG_SZ:
+                    *pdwType = BURN_VARIANT_TYPE_STRING;
+                    break;
+                case REG_QWORD:
+                    *pdwType = BURN_VARIANT_TYPE_NUMERIC; // | BURN_VARIANT_TYPE_VERSION
+                    break;
+                default:
+                    *pdwType = BURN_VARIANT_TYPE_NONE;
+            }            
+        }
+        else
+        {
+            hr = E_INVALIDARG;
+        }
+    LExit:
         return hr;
     }
 
@@ -743,7 +777,7 @@ LExit:
         if (wzVariable && *wzVariable)
         {
             hr = VariableSetString(&m_pEngineState->variables, wzVariable, wzValue, FALSE);
-            ExitOnFailure(hr, "Failed to set numeric variable.");
+            ExitOnFailure(hr, "Failed to set string variable.");
         }
         else
         {

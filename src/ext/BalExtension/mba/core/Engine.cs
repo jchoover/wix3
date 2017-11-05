@@ -337,6 +337,92 @@ namespace Microsoft.Tools.WindowsInstallerXml.Bootstrapper
         }
 
         /// <summary>
+        /// Gets the related bundle number variable given by <paramref name="bundleId"/> and <paramref name="name"/>.
+        /// </summary>
+        /// <param name="bundleId">The Id of the bundle.</param>
+        /// <param name="name">The name of the variable to get.</param>
+        /// <returns>The value as a long.</returns>
+        /// <exception cref="Exception">An error occurred getting the variable.</exception>
+        public long GetRelatedBundleVariableNumber(string bundleId, string name)
+        {
+            long value;
+            int ret = this.engine.GetRelatedBundleVariableNumeric(bundleId, name, out value);
+            if (NativeMethods.S_OK != ret)
+            {
+                throw new Win32Exception(ret);
+            }
+
+            return value;
+        }
+
+        /// <summary>
+        /// Gets the related bundle string variable given by <paramref name="bundleId"/> and <paramref name="name"/>.
+        /// </summary>
+        /// <param name="bundleId">The Id of the bundle.</param>
+        /// <param name="name">The name of the variable to get.</param>
+        /// <returns>The value as a string.</returns>
+        /// <exception cref="Exception">An error occurred getting the variable.</exception>
+        public string GetRelatedBundleVariableString(string bundleId, string name)
+        {
+            int capacity = InitialBufferSize;
+            int length = 0;
+            IntPtr pValue = Marshal.AllocCoTaskMem(capacity * UnicodeEncoding.CharSize);
+            try
+            {
+                // Get the size of the buffer.
+                int ret = this.engine.GetRelatedBundleVariableString(bundleId, name, pValue, ref capacity);
+                if (NativeMethods.E_INSUFFICIENT_BUFFER == ret || NativeMethods.E_MOREDATA == ret)
+                {
+                    // Don't need to add 1 for the null terminator, the engine already includes that.
+                    pValue = Marshal.ReAllocCoTaskMem(pValue, capacity * UnicodeEncoding.CharSize);
+                    ret = this.engine.GetRelatedBundleVariableString(bundleId, name, pValue, ref capacity);
+                }
+
+                if (NativeMethods.S_OK != ret)
+                {
+                    throw Marshal.GetExceptionForHR(ret);
+                }
+
+                // The engine only returns the exact length of the string if the buffer was too small, so calculate it ourselves.
+                for (length = 0; length < capacity; ++length)
+                {
+                    if (0 == Marshal.ReadInt16(pValue, length * UnicodeEncoding.CharSize))
+                    {
+                        break;
+                    }
+                }
+
+                return Marshal.PtrToStringUni(pValue, length);
+            }
+            finally
+            {
+                if (IntPtr.Zero != pValue)
+                {
+                    Marshal.FreeCoTaskMem(pValue);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the related bundle Version variable given by <paramref name="bundleId"/> and <paramref name="name"/>.
+        /// </summary>
+        /// <param name="bundleId">The Id of the bundle.</param>
+        /// <param name="name">The name of the variable to get.</param>
+        /// <returns>The value as a long.</returns>
+        /// <exception cref="Exception">An error occurred getting the variable.</exception>
+        public Version GetRelatedBundleVariableVersion(string bundleId, string name)
+        {
+            long value;
+            int ret = this.engine.GetRelatedBundleVariableVersion(bundleId, name, out value);
+            if (NativeMethods.S_OK != ret)
+            {
+                throw new Win32Exception(ret);
+            }
+
+            return LongToVersion(value);
+        }
+
+        /// <summary>
         /// Launches a preapproved executable elevated.  As long as the engine already elevated, there will be no UAC prompt.
         /// </summary>
         /// <param name="hwndParent">The parent window of the elevation dialog (if the engine hasn't elevated yet).</param>
@@ -504,6 +590,20 @@ namespace Microsoft.Tools.WindowsInstallerXml.Bootstrapper
             int ret = this.engine.GetVariableString(name, pValue, ref capacity);
 
             return NativeMethods.E_NOTFOUND != ret;
+        }
+
+        /// <summary>
+        /// Gets whether the related bundle variable given by <paramref name="name"/> exists.
+        /// </summary>
+        /// <param name="bundleId">The Id of the related bundle.</param>
+        /// <param name="name">The name of the variable to check.</param>
+        /// <returns>True if the variable given by <paramref name="name"/> exists; otherwise, false.</returns>
+        internal bool containsRelatedBundelVariable(string bundleId, string name)
+        {
+            long type = 0;
+            int ret = this.engine.GetRelatedBundleVariableType(bundleId, name, out type);
+
+            return NativeMethods.S_OK == ret;
         }
 
         /// <summary>

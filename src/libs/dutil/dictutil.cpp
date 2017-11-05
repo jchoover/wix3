@@ -263,6 +263,45 @@ LExit:
     return hr;
 }
 
+extern "C" HRESULT DAPI DictDuplicateStringList(
+    __out_bcount(STRINGDICT_HANDLE_BYTES) STRINGDICT_HANDLE* psdHandle,
+    __in_bcount(STRINGDICT_HANDLE_BYTES) STRINGDICT_HANDLE sdStringList
+)
+{
+    HRESULT hr = S_OK;
+    LPCWSTR wzKey = NULL;
+    STRINGDICT_STRUCT *psd = static_cast<STRINGDICT_STRUCT *>(sdStringList);
+
+    ExitOnNull(psdHandle, hr, E_INVALIDARG, "Destination handle not specified while duplicating dict");
+    ExitOnNull(sdStringList, hr, E_INVALIDARG, "Source handle not specified while duplicating dict");
+
+    if (psd->dwBucketSizeIndex >= countof(MAX_BUCKET_SIZES))
+    {
+        hr = E_INVALIDARG;
+        ExitOnFailure(hr, "Invalid dictionary - bucket size index is out of range");
+    }
+
+    if (DICT_STRING_LIST != psd->dtType)
+    {
+        hr = E_INVALIDARG;
+        ExitOnFailure1(hr, "Tried to duplicate wrong dictionary type! This dictionary type is: %d", psd->dtType);
+    }
+
+    hr = DictCreateStringList(psdHandle, psd->dwNumItems, psd->dfFlags);
+    ExitOnFailure(hr, "Unable to allocate duplicate string dict.");
+
+    for (DWORD i = 0; i < psd->dwNumItems; ++i)
+    {
+        wzKey = GetKey(psd, TranslateOffsetToValue(psd, psd->ppvItemList[i]));
+        ExitOnNull(wzKey, hr, E_INVALIDARG, "String not specified in existing dict value");
+
+        hr = DictAddKey(*psdHandle, wzKey);
+        ExitOnFailure(hr, "Unable to duplicate key for stringdict.");
+    }
+LExit:
+    return hr;
+}
+
 // Todo: Dict should resize itself when (number of items) exceeds (number of buckets / MAX_BUCKETS_TO_ITEMS_RATIO)
 extern "C" HRESULT DAPI DictAddKey(
     __in_bcount(STRINGDICT_HANDLE_BYTES) STRINGDICT_HANDLE sdHandle,

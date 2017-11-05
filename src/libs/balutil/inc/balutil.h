@@ -131,6 +131,22 @@ DAPI_(HRESULT) BalGetRelatedBundleNumericVariable(
     __out LONGLONG* pllValue
 );
 
+/*******************************************************************
+BalSetNumericVariable - sets a numeric variable.
+********************************************************************/
+DAPI_(HRESULT) BalSetNumericVariable(
+    __in_z LPCWSTR wzVariable,
+    __in LONGLONG llValue
+);
+
+/*******************************************************************
+BalSetStringVariable - sets a string variable.
+********************************************************************/
+DAPI_(HRESULT) BalSetStringVariable(
+    __in_z LPCWSTR wzVariable,
+    __in_z LPCWSTR wzValue
+);
+
 #ifdef __cplusplus
 }
 #endif

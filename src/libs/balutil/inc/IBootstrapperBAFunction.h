@@ -6,6 +6,10 @@
 
 #include "IBootstrapperEngine.h"
 
+#ifndef STRINGDICT_HANDLE
+typedef void* STRINGDICT_HANDLE;
+#endif
+
 interface IBootstrapperBAFunction
 {
     STDMETHOD(OnDetect)() = 0;
@@ -21,6 +25,7 @@ interface IBootstrapperBAFunction
         __in BOOTSTRAPPER_RELATED_OPERATION operation
         ) = 0;
     STDMETHOD(OnPlanRelatedBundle)(__in_z LPCWSTR /*wzBundleId*/, __inout_z BOOTSTRAPPER_REQUEST_STATE* pRequestedState) = 0;
+    STDMETHOD(OnProcessCommandLine)(__in_z LPCWSTR wzCommandLine, __in STRINGDICT_HANDLE sdOverridden) = 0;
 };
 
 #ifdef __cplusplus

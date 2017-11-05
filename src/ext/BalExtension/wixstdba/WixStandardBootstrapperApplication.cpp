@@ -1367,6 +1367,11 @@ private: // privates
         hr = LoadBootstrapperBAFunctions();
         BalExitOnFailure(hr, "Failed to load bootstrapper functions.");
 
+        if (m_pBAFunction)
+        {
+            m_pBAFunction->OnProcessCommandLine(m_command.wzCommandLine , m_sdOverriddenVariables);
+        }
+
         GetBundleFileVersion();
         // don't fail if we couldn't get the version info; best-effort only
 
@@ -1384,6 +1389,7 @@ private: // privates
     LExit:
         ReleaseObject(pixdManifest);
         ReleaseStr(sczModulePath);
+        ReleaseNullDict(m_sdOverriddenVariables);
 
         return hr;
     }
@@ -1459,6 +1465,15 @@ private: // privates
 
                         hr = m_pEngine->SetVariableString(sczVariableName, sczVariableValue);
                         BalExitOnFailure(hr, "Failed to set variable.");
+
+                        if (NULL == m_sdOverriddenVariables)
+                        {
+                            hr = DictCreateStringList(&m_sdOverriddenVariables, 32, DICT_FLAG_NONE);
+                            ExitOnFailure(hr, "Failed to create the string dictionary.");
+                        }
+
+                        hr = DictAddKey(m_sdOverriddenVariables, sczVariableName);
+                        ExitOnFailure1(hr, "Failed to add \"%ls\" to the string dictionary.", sczVariableName);
                     }
                     else
                     {
@@ -3740,6 +3755,7 @@ public:
         m_fShowFilesInUse = FALSE;
 
         m_sdOverridableVariables = NULL;
+        m_sdOverriddenVariables = NULL;
         m_shPrereqSupportPackages = NULL;
         m_rgPrereqPackages = NULL;
         m_cPrereqPackages = 0;
@@ -3777,6 +3793,7 @@ public:
 
         ReleaseObject(m_pTaskbarList);
         ReleaseDict(m_sdOverridableVariables);
+        ReleaseDict(m_sdOverriddenVariables);
         ReleaseDict(m_shPrereqSupportPackages);
         ReleaseMem(m_rgPrereqPackages);
         ReleaseStr(m_sczFailedMessage);
@@ -3843,6 +3860,7 @@ private:
     BOOL m_fShowFilesInUse;
 
     STRINGDICT_HANDLE m_sdOverridableVariables;
+    STRINGDICT_HANDLE m_sdOverriddenVariables;
 
     WIXSTDBA_PREREQ_PACKAGE* m_rgPrereqPackages;
     DWORD m_cPrereqPackages;

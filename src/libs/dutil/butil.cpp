@@ -169,14 +169,11 @@ extern "C" HRESULT DAPI BundleGetBundleSharedVariable(
 
     switch (dwType)
     {
-    case REG_SZ:
-        hr = RegReadString(hkBundle, wzAttribute, &sczValue);
-        ExitOnFailure(hr, "Failed to read string shared variable.");
-        
+    case REG_SZ:        
         if (pcbData)
         {
-            // hr = StrMaxLength(&sczValue, pcbData);
-            // ExitOnFailure(hr, "Failed to determine length of string.");
+            hr = RegReadString(hkBundle, wzAttribute, &sczValue);
+            ExitOnFailure(hr, "Failed to read string shared variable.");
 
             hr = ::StringCchLengthW(sczValue, STRSAFE_MAX_CCH, reinterpret_cast<UINT_PTR*>(&cbData));
             ExitOnFailure(hr, "Failed to calculate length of string");
@@ -203,26 +200,23 @@ extern "C" HRESULT DAPI BundleGetBundleSharedVariable(
 
         break;
     case REG_QWORD:
-        hr = RegReadQword(hkBundle, wzAttribute, &qwValue);
-        ExitOnFailure(hr, "Failed to read qword shared variable.");
-
-        if (pcbData)
+        if (pcbData && pvData)
         {
-            if (pvData)
-            {
-                if (*pcbData < sizeof(DWORD64))
-                {
-                    *pcbData = sizeof(DWORD64);
-                    ExitOnFailure(hr = HRESULT_FROM_WIN32(ERROR_MORE_DATA), "A numeric buffer is too small to hold the requested data.");
-                }
-                else if (*pcbData > sizeof(DWORD64))
-                {
-                    *pcbData = sizeof(DWORD64);
-                    ExitOnFailure(hr = E_INVALIDARG, "A numeric buffer is too large to hold the requested data.");
-                }
+            hr = RegReadQword(hkBundle, wzAttribute, &qwValue);
+            ExitOnFailure(hr, "Failed to read qword shared variable.");
 
-                *reinterpret_cast<DWORD64*>(pvData) = qwValue;
+            if (*pcbData < sizeof(DWORD64))
+            {
+                *pcbData = sizeof(DWORD64);
+                ExitOnFailure(hr = HRESULT_FROM_WIN32(ERROR_MORE_DATA), "A numeric buffer is too small to hold the requested data.");
             }
+            else if (*pcbData > sizeof(DWORD64))
+            {
+                *pcbData = sizeof(DWORD64);
+                ExitOnFailure(hr = E_INVALIDARG, "A numeric buffer is too large to hold the requested data.");
+            }
+
+            *reinterpret_cast<DWORD64*>(pvData) = qwValue;
         }
         break;
     default:
