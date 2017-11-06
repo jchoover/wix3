@@ -1369,7 +1369,8 @@ private: // privates
 
         if (m_pBAFunction)
         {
-            m_pBAFunction->OnProcessCommandLine(m_command.wzCommandLine , m_sdOverriddenVariables);
+            hr = m_pBAFunction->OnProcessCommandLine(m_command.wzCommandLine , m_sdOverriddenVariables);
+            BalExitOnFailure(hr, "BA Failed to process command line.");
         }
 
         GetBundleFileVersion();

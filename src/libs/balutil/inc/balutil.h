@@ -74,6 +74,17 @@ DAPI_(HRESULT) BalGetNumericVariable(
     );
 
 /*******************************************************************
+BalGetVersionVariable - gets a version from a variable in the engine.
+
+Note: Returns E_NOTFOUND if variable does not exist.
+********************************************************************/
+DAPI_(HRESULT) BalGetVersionVariable(
+    __in_z LPCWSTR wzVariable,
+    __out DWORD64* pqwValue
+);
+
+
+/*******************************************************************
 BalStringVariableExists - checks if a string variable exists in the engine.
 
 ********************************************************************/

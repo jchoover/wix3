@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix 
+  xmlns="http://schemas.microsoft.com/wix/2006/wi" 
+  xmlns:bal="http://schemas.microsoft.com/wix/BalExtension"
+  xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+  
+	<Bundle Name="Bootstrapper" Version="1.1.0.0" Manufacturer="Some Random Company Inc." UpgradeCode="fa6f6e20-f886-404a-9a94-ab545d05fe9f">
+
+    <!-- To probe for existing install ini (User configurable settings post install) -->
+    <Variable Name="PRIOR_INSTALL_DIR" /> 
+    <!-- Optionally allow older Major.Minor instances of the application -->
+    <Variable Name="REMOVE_OLDER_VERSIONS" Value="1" Type="numeric" Persisted="shared" bal:Overridable="yes"  />
+    <!-- Configuration for the application to check for automatic updates on startup -->
+    <Variable Name="AUTOMATICUPDATE" Value="1" Type="numeric" Persisted="shared" bal:Overridable="yes"  />
+    
+    <Variable Name="InstallOptionA" Type="string" Persisted="shared" Value="Option A"/>
+    <Variable Name="InstallOptionB" Type="numeric" Persisted="shared" Value="1"/>
+    
+    <!--<Variable Name="InstallOptionC" Type="version" Persisted="shared" Value="v1.1.2.1"/>-->
+
+    <util:DirectorySearch Id="vUpdateDir" Path="[CommonFilesFolder]\Some Random Company Inc.\App" Variable="PRIOR_INSTALL_DIR"  />
+    
+		<BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.RtfLicense">
+			<Payload Name="bafunctions.dll" SourceFile="..\Debug\BAFunctions.dll" Compressed="yes" />
+		</BootstrapperApplicationRef>
+
+		<Chain>
+			<!-- TODO: Define the list of chained packages. -->
+			<MsiPackage SourceFile="..\Package\bin\Debug\Package.msi" Compressed="yes" />
+		</Chain>
+	</Bundle>
+</Wix>

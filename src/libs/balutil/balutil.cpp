@@ -102,6 +102,25 @@ LExit:
     return hr;
 }
 
+// The contents of pqwValue may be sensitive, if variable is hidden should keep value encrypted and SecureZeroMemory.
+DAPI_(HRESULT) BalGetVersionVariable(
+    __in_z LPCWSTR wzVariable,
+    __out DWORD64* pqwValue
+)
+{
+    HRESULT hr = S_OK;
+
+    if (!vpEngine)
+    {
+        hr = E_POINTER;
+        ExitOnRootFailure(hr, "BalInitialize() must be called first.");
+    }
+
+    hr = vpEngine->GetVariableVersion(wzVariable, pqwValue);
+
+LExit:
+    return hr;
+}
 
 DAPI_(BOOL) BalStringVariableExists(
     __in_z LPCWSTR wzVariable
