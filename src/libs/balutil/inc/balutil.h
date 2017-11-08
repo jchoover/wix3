@@ -143,6 +143,15 @@ DAPI_(HRESULT) BalGetRelatedBundleNumericVariable(
 );
 
 /*******************************************************************
+BalGetRelatedBundleVersionVariable - gets a version from a shared variable in the engine.
+********************************************************************/
+DAPI_(HRESULT) BalGetRelatedBundleVersionVariable(
+    __in_z LPCWSTR wzBundleId,
+    __in_z LPCWSTR wzVariable,
+    __out DWORD64* pqwValue
+);
+
+/*******************************************************************
 BalSetNumericVariable - sets a numeric variable.
 ********************************************************************/
 DAPI_(HRESULT) BalSetNumericVariable(

@@ -4,8 +4,11 @@
   xmlns:bal="http://schemas.microsoft.com/wix/BalExtension"
   xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
   
-	<Bundle Name="Bootstrapper" Version="1.1.0.0" Manufacturer="Some Random Company Inc." UpgradeCode="fa6f6e20-f886-404a-9a94-ab545d05fe9f">
+	<Bundle Name="Bootstrapper" Version="$(var.Version)" Manufacturer="Some Random Company Inc." UpgradeCode="$(var.UpgradeCode)">
 
+    <?if ($(var.Version) ~= 1.3.0.0) or ($(var.Version) ~= 1.3.1.0)?>
+      <RelatedBundle Id="$(var.UpgradeCode_1_2)" Action="Detect"/>
+    <?endif ?>
     <!-- To probe for existing install ini (User configurable settings post install) -->
     <Variable Name="PRIOR_INSTALL_DIR" /> 
     <!-- Optionally allow older Major.Minor instances of the application -->
@@ -15,18 +18,24 @@
     
     <Variable Name="InstallOptionA" Type="string" Persisted="shared" Value="Option A"/>
     <Variable Name="InstallOptionB" Type="numeric" Persisted="shared" Value="1"/>
+    <Variable Name="InstallOptionC" Type="version" Persisted="shared" Value="1.0.0.1"/>
     
     <!--<Variable Name="InstallOptionC" Type="version" Persisted="shared" Value="v1.1.2.1"/>-->
-
-    <util:DirectorySearch Id="vUpdateDir" Path="[CommonFilesFolder]\Some Random Company Inc.\App" Variable="PRIOR_INSTALL_DIR"  />
+    <!-- <RelatedBundle Id="$(var.BundleUpgradeCode)" Action="Upgrade"/> -->
+    
+    <util:DirectorySearch Id="vUpdateDir" Path="[ProgramFilesFolder]Some Random Company Inc.\App" Variable="PRIOR_INSTALL_DIR"  />
     
 		<BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.RtfLicense">
+      <bal:WixStandardBootstrapperApplication	LicenseFile="License Agreement.rtf" LogoFile="logo.png" SuppressOptionsUI="no" ThemeFile="RtfTheme.xml"  LocalizationFile="RtfTheme.wxl" />
 			<Payload Name="bafunctions.dll" SourceFile="..\Debug\BAFunctions.dll" Compressed="yes" />
 		</BootstrapperApplicationRef>
 
 		<Chain>
 			<!-- TODO: Define the list of chained packages. -->
-			<MsiPackage SourceFile="..\Package\bin\Debug\Package.msi" Compressed="yes" />
+      <MsiPackage SourceFile="..\Package\bin\Debug\Package.msi" Compressed="yes">
+        <MsiProperty Name="AUTOMATICUPDATE" Value="[AUTOMATICUPDATE]"/>
+        <MsiProperty Name="BUNDLE_UPGRADE_CODE" Value="$(var.UpgradeCode)"/>
+      </MsiPackage>
 		</Chain>
 	</Bundle>
 </Wix>

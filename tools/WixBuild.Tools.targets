@@ -67,12 +67,12 @@
       Code="WIXBUILDINIT"
       Condition=" '$(OFFICIAL_WIX_BUILD)'=='' and ($(DisabledWixStrongName32) == 'ABSENT' or $(DisabledWixStrongName64) == 'ABSENT') "
       Text="Strong name validation for the WiX toolset must be disabled on a developer machine to build. Execute 'msbuild $(MSBuildThisFileDirectory)OneTimeWixBuildInitialization.proj' from an elevated command prompt." />
-
+<!--
     <Error
       Code="WIXBUILD000"
       Condition=" '$(OFFICIAL_WIX_BUILD)'!='' and !($(VS2010SdkAvailable) and $(VS2012SdkAvailable) and $(VS2013SdkAvailable) and $(VS2015SdkAvailable))"
       Text="All versions of VS and VS SDK are required on an official build. Install VS2010, VS2012, VS2013, VS2015, and matching SDKs." />
-
+-->
     <!-- 
         Note that we don't actually require any VSSDK beyond the VS2010 SDK. We'll build against later versions if 
         available using the "latest available" logic in WixBuild.VisualStudioSDK.targets. However, we're not 
@@ -486,4 +486,60 @@
     </ItemGroup>
   </Target>
 
+  <PropertyGroup>
+    <!-- New Cert's, Expire 8/12/2019 -->
+    <GfcSha1>39F001B0FA82C2ECC1BE2F8C553384C2E3C7DDBA</GfcSha1>
+    <GfcSha256>D5505F145EBAA933E5BAA91542A7DE40E823A567</GfcSha256>
+	
+    <AfterBuildDependsOn>
+		SignOutput;
+      $(AfterBuildDependsOn);      
+    </AfterBuildDependsOn>	
+  </PropertyGroup>
+  <Target Name="SignOutput" DependsOnTargets="UsesSignTool">
+    <Exec Condition="('$(Configuration)' != 'Debug') and (('$(OutputType)' == 'Library') or ('$(OutputType)' == 'WinExe') or ('$(OutputType)' == 'Exe')) and (('$(TargetExt)' == '.dll') or ('$(TargetExt)' == '.exe'))"
+        Command="&quot;$(SignToolPath)&quot; sign /t http://timestamp.digicert.com /sha1 $(GfcSha1) /a &quot;$(TargetDir)$(TargetFileName)&quot;" />
+    <Exec Condition="('$(Configuration)' != 'Debug') and (('$(OutputType)' == 'Library') or ('$(OutputType)' == 'WinExe') or ('$(OutputType)' == 'Exe')) and (('$(TargetExt)' == '.dll') or ('$(TargetExt)' == '.exe'))"
+        Command="&quot;$(SignToolPath)&quot; sign /tr http://timestamp.digicert.com /td sha256 /fd sha256 /as /sha1 $(GfcSha256) /a &quot;$(TargetDir)$(TargetFileName)&quot;" />   
+	<Message Importance="high" Text="OutputType = '$(OutputType)'" Condition=" !(('$(OutputType)' == 'Library') or ('$(OutputType)' == 'WinExe') or ('$(OutputType)' == 'Exe'))" />
+	<Message Importance="high" Text="TargetExt = '$(TargetExt)'" Condition=" !(('$(TargetExt)' == '.dll') or ('$(TargetExt)' == '.exe'))" />
+	
+  </Target>
+
+  <Target Name="UsesFrameworkSdk">
+	<!-- Use 4.0 if it exists, otherwise fall back to 3.5 -->
+    <GetFrameworkSdkPath Condition=" '$(FrameworkSdkPath)' == '' ">
+      <Output TaskParameter="FrameworkSdkVersion40Path" PropertyName="FrameworkSdkPath" />
+    </GetFrameworkSdkPath>
+	  <GetFrameworkSdkPath Condition=" '$(FrameworkSdkPath)' == '' ">
+      <Output TaskParameter="FrameworkSdkVersion35Path" PropertyName="FrameworkSdkPath" />
+    </GetFrameworkSdkPath> 	
+	
+	  <GetFrameworkSdkPath>
+      <Output TaskParameter="FrameworkSdkVersion35Path" PropertyName="FrameworkSdkVersion35Path" />
+    </GetFrameworkSdkPath> 
+    
+    <PropertyGroup>
+      <Win10SDK>$(registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Microsoft SDKs\Windows\v10.0@InstallationFolder)</Win10SDK>
+      
+	  <Win8SDK Condition=" '$(Win8SDK)' == ''">$(registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Microsoft SDKs\Windows\v8.1@InstallationFolder)</Win8SDK>
+      <Win8SDK Condition=" '$(Win8SDK)' == ''">$(registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Microsoft SDKs\Windows\v8.0@InstallationFolder)</Win8SDK>
+	  
+      <NETFX461SDK>$(registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Microsoft SDKs\NETFXSDK\4.6.1\WinSDK-NetFx40Tools-x86@InstallationFolder)</NETFX461SDK>
+	  <NETFX462SDK>$(registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Microsoft SDKs\NETFXSDK\4.6.2\WinSDK-NetFx40Tools-x86@InstallationFolder)</NETFX462SDK>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="UsesSignTool" DependsOnTargets="UsesFrameworkSdk">
+    <PropertyGroup>
+	  <SignToolPath Condition="('$(SignToolPath)'=='') and Exists('$(Win10SDK)\bin\x86\signtool.exe')">$(Win10SDK)\bin\x86\signtool.exe</SignToolPath>
+	  <SignToolPath Condition="('$(SignToolPath)'=='') and Exists('$(Win8SDK)\bin\x86\signtool.exe')">$(Win8SDK)\bin\x86\signtool.exe</SignToolPath>
+      <SignToolPath Condition="('$(SignToolPath)'=='') and Exists('$(FrameworkSdkPath)bin\signtool.exe')">$(FrameworkSdkPath)bin\signtool.exe</SignToolPath>
+	  <SignToolPath Condition="('$(SignToolPath)'=='') and Exists('$(FrameworkSdkVersion35Path)bin\signtool.exe')">$(FrameworkSdkVersion35Path)bin\signtool.exe</SignToolPath>
+    </PropertyGroup>
+	<Message Text="Win10SDK is: $(Win10SDK)" Importance="normal"/>
+	<Message Text="Win8SDK is: $(Win8SDK)" Importance="normal"/>
+	<Message Text="SignToolPath is: $(SignToolPath)" Importance="normal"/>
+	<Error Condition=" '$(SignToolPath)' == '' " Text="Unable to locate signtool in any of the defined locations. Please ensure the proper Windows SDK was installed." />
+  </Target>  
 </Project>

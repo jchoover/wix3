@@ -302,6 +302,25 @@ LExit:
     return hr;
 }
 
+DAPI_(HRESULT) BalGetRelatedBundleVersionVariable(
+    __in_z LPCWSTR wzBundleId,
+    __in_z LPCWSTR wzVariable,
+    __out DWORD64* pqwValue
+)
+{
+    HRESULT hr = S_OK;
+
+    if (!vpEngine)
+    {
+        hr = E_POINTER;
+        ExitOnRootFailure(hr, "BalInitialize() must be called first.");
+    }
+
+    hr = vpEngine->GetRelatedBundleVariableVersion(wzBundleId, wzVariable, pqwValue);
+
+LExit:
+    return hr;
+}
 /*******************************************************************
 ********************************************************************/
 DAPI_(HRESULT) BalSetNumericVariable(

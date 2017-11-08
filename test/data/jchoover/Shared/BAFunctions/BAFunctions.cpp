@@ -9,7 +9,7 @@
 
 static const LPCWSTR BUNDLE_INI_FILE_PATH_FORMAT = L"%ls\\Setup.ini";
 static const LPCWSTR BUNDLE_INI_FILE_SECTION_CONFIG = L"Config";
-static const LPCWSTR BUNDLE_INI_FILE_KEY_AUTOMATIC_UPDATE = L"AutomaticUpdates";
+static const LPCWSTR BUNDLE_INI_FILE_KEY_AUTOMATIC_UPDATE = L"AUTOMATICUPDATE";
 
 static const LPCWSTR BUNDLE_VARIABLE_AUTOMATIC_UPDATE = L"AUTOMATICUPDATE";
 static const LPCWSTR BUNDLE_VARIABLE_PRIOR_INSTALL_DIR = L"PRIOR_INSTALL_DIR";
@@ -48,8 +48,53 @@ public:
         LPWSTR wzPriorAppDataDir = NULL;
         LPWSTR wzValue = NULL;
         LONGLONG llValue = 0;
+        DWORD64 qwVersion = 0;
 
         BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Running detect complete BA function");
+
+        //-------------------------------------------------------------------------------------------------
+        // Read shared variables first
+        if (m_wzBundleId)
+        {
+            BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Related bundle %ls found, asking for shared variable.", m_wzBundleId);
+
+            hr = HasOverride(BUNDLE_VARIABLE_REMOVE_OLDER_VERSIONS);
+            if (E_NOTFOUND == hr)
+            {
+                hr = BalGetRelatedBundleNumericVariable(m_wzBundleId, BUNDLE_VARIABLE_REMOVE_OLDER_VERSIONS, &llValue);
+                BalExitOnFailure(hr, "Unable to read related bundle %ls shared variable '%ls'.", m_wzBundleId, BUNDLE_VARIABLE_REMOVE_OLDER_VERSIONS);
+                
+                hr = BalSetNumericVariable(BUNDLE_VARIABLE_REMOVE_OLDER_VERSIONS, llValue);
+                BalExitOnFailure(hr, "Unable to set variable %ls.", BUNDLE_VARIABLE_REMOVE_OLDER_VERSIONS);
+            }
+
+            hr = BalGetRelatedBundleStringVariable(m_wzBundleId, L"InstallOptionA", &wzValue);
+            BalExitOnFailure(hr, "Unable to read related bundle %ls shared variable 'InstallOptionA'.", m_wzBundleId);
+
+            BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Shared variable has a value of %ls.", wzValue);
+
+            hr = BalGetRelatedBundleNumericVariable(m_wzBundleId, L"InstallOptionB", &llValue);
+            BalExitOnFailure(hr, "Unable to read related bundle %ls shared variable 'InstallOptionB'.", m_wzBundleId);
+
+            BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Shared variable has a value of %I64d.", llValue);
+
+            hr = BalGetRelatedBundleVersionVariable(m_wzBundleId, L"InstallOptionC", &qwVersion);
+            BalExitOnFailure(hr, "Unable to read related bundle %ls shared variable 'InstallOptionC'.", m_wzBundleId);
+
+            WORD wMajor = 0;
+            WORD wMinor = 0;
+            WORD wBuild = 0;
+            WORD wRevision = 0;
+
+            // Mask and shift each WORD for each field.
+            wMajor = (WORD)(qwVersion >> 48 & 0xffff);
+            wMinor = (WORD)(qwVersion >> 32 & 0xffff);
+            wBuild = (WORD)(qwVersion >> 16 & 0xffff);
+            wRevision = (WORD)(qwVersion & 0xffff);
+
+            BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Shared variable InstallOptionC has a value of %u.%u.%u.%u.", wMajor, wMinor, wBuild, wRevision);
+        }
+
         //-------------------------------------------------------------------------------------------------
         // Probing for install ini in order: Bundle Dir, Install Dir.
         hr = this->ReadIniFromInstallLocation();
@@ -71,22 +116,6 @@ public:
             hr = S_OK;
         }
 
-
-        // -
-        if (m_wzBundleId)
-        {
-            BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Related bundle %ls found, asking for shared variable.", m_wzBundleId);
-
-            hr = BalGetRelatedBundleStringVariable(m_wzBundleId, L"InstallOptionA", &wzValue);
-            BalExitOnFailure(hr, "Unable to read related bundle %ls shared variable 'InstallOptionA'.", m_wzBundleId);
-
-            BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Shared variable has a value of %ls.", wzValue);
-
-            hr = BalGetRelatedBundleNumericVariable(m_wzBundleId, L"InstallOptionB", &llValue);
-            BalExitOnFailure(hr, "Unable to read related bundle %ls shared variable 'InstallOptionB'.", m_wzBundleId);
-
-            BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Shared variable has a value of %I64d.", llValue);
-        }
         //-------------------------------------------------------------------------------------------------
     LExit:
         ReleaseStr(wzValue);
@@ -149,47 +178,23 @@ public:
         HRESULT hr = S_OK;
         RELATED_BUNDLE* pRelatedBundle = NULL;
 
-        BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "OnPlanRelatedBundle BA function: %ls", wzBundleId);
+        BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "OnPlanRelatedBundle BA function: %ls, %u", wzBundleId, *pRequestedState);
 
         hr = GetRelatedBundle(wzBundleId, &pRelatedBundle);
         ExitOnFailure(hr, "Planning bundle that wasn't detected.");
 
-        if (BOOTSTRAPPER_REQUEST_STATE_ABSENT == *pRequestedState)
+        if (BOOTSTRAPPER_REQUEST_STATE_NONE == *pRequestedState)
         {
+            BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Related bundle is being requested as None.");
+
             LONGLONG llRemoveOld = 0;
             hr = BalGetNumericVariable(BUNDLE_VARIABLE_REMOVE_OLDER_VERSIONS, &llRemoveOld);
             ExitOnFailure(hr, "Failed to read bundle variable %ls.", BUNDLE_VARIABLE_REMOVE_OLDER_VERSIONS);
 
-            if (0 == llRemoveOld)
+            if (0 != llRemoveOld)
             {
-                // If we are planning on removing the related bundle, look to see if it is a different Major.Minor version of ourselves
-                // If so, leave it be.
-                WORD wMajor = 0;
-                WORD wMinor = 0;
-                // WORD wBuild = 0;
-                // WORD wRevision = 0;
-
-                // Mask and shift each WORD for each field.
-                wMajor = (WORD)(m_qwBundleVersion >> 48 & 0xffff);
-                wMinor = (WORD)(m_qwBundleVersion >> 32 & 0xffff);
-                // wBuild = (WORD)(pRelatedBundle->dw64Version >> 16 & 0xffff);
-                // wRevision = (WORD)(pRelatedBundle->dw64Version & 0xffff);
-
-                WORD wRelatedMajor = 0;
-                WORD wRelatedMinor = 0;
-                // WORD wRelatedBuild = 0;
-                // WORD wRelatedRevision = 0;
-
-                // Mask and shift each WORD for each field.
-                wRelatedMajor = (WORD)(pRelatedBundle->dw64Version >> 48 & 0xffff);
-                wRelatedMinor = (WORD)(pRelatedBundle->dw64Version >> 32 & 0xffff);
-                // wBuild = (WORD)(pRelatedBundle->dw64Version >> 16 & 0xffff);
-                // wRevision = (WORD)(pRelatedBundle->dw64Version & 0xffff);
-
-                if ((wMajor != wRelatedMajor) && (wMinor != wRelatedMinor))
-                {
-                    *pRequestedState = BOOTSTRAPPER_REQUEST_STATE_PRESENT;
-                }
+                *pRequestedState = BOOTSTRAPPER_REQUEST_STATE_ABSENT;
+                BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Related bundle is being requested as Absent.");
             }
         }
     LExit:
@@ -303,8 +308,8 @@ private:
         LPWSTR wzOrigionalSource = NULL;
         LPWSTR wzIniFile = NULL;
 
-        hr = BalGetStringVariable(L"WixBundleOriginalSource", &wzOrigionalSource);
-        BalExitOnFailure(hr, "Unable to resolve WixBundleOriginalSource.");
+        hr = BalGetStringVariable(L"WixBundleOriginalSourceFolder", &wzOrigionalSource);
+        BalExitOnFailure(hr, "Unable to resolve WixBundleOriginalSourceFolder.");
 
         hr = StrAllocFormatted(&wzIniFile, L"%ls\\Setup.ini", wzOrigionalSource);
         BalExitOnFailure(hr, "Unable to allocate ini file path.");
@@ -340,9 +345,13 @@ private:
 
         if (PathFileExists(wzIniFile))
         {
+            BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Ini file %ls exists.", wzIniFile);
+
             hr = HasOverride(BUNDLE_VARIABLE_AUTOMATIC_UPDATE);
             if (E_NOTFOUND == hr)
             {
+                BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Variable %ls does not have an override, attempting to read from ini.", BUNDLE_VARIABLE_AUTOMATIC_UPDATE);
+
                 int iAutomaticUpdate = ::GetPrivateProfileInt(BUNDLE_INI_FILE_SECTION_CONFIG, BUNDLE_INI_FILE_KEY_AUTOMATIC_UPDATE, 1, wzIniFile);
 
                 hr = BalSetNumericVariable(BUNDLE_VARIABLE_AUTOMATIC_UPDATE, iAutomaticUpdate);
@@ -355,6 +364,7 @@ private:
         }
         else
         {
+            BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Ini file %ls does not exist.", wzIniFile);
             hr = E_FILENOTFOUND;
         }
 
