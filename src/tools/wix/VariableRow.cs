@@ -61,16 +61,6 @@ namespace Microsoft.Tools.WindowsInstallerXml
         }
 
         /// <summary>
-        /// Gets or sets whether this variable is shared.
-        /// </summary>
-        /// <value>Whether this variable is shared.</value>
-        public bool Shared
-        {
-            get { return 1 == (int)this.Fields[5].Data ? true : false; }
-            set { this.Fields[5].Data = value ? 1 : 0; }
-        }
-
-        /// <summary>
         /// Gets or sets the variable's value.
         /// </summary>
         /// <value>The variable's value.</value>

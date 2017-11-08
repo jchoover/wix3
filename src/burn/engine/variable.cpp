@@ -320,7 +320,6 @@ extern "C" HRESULT VariablesParseFromXml(
         ExitOnFailure(hr, "Failed to get @Hidden.");
 
         // @Persisted
-        // hr = XmlGetYesNoSharedAttribute(pixnNode, L"Persisted", &persisted);
         hr = XmlGetAttributeEx(pixnNode, L"Persisted", &sczPersisted);
         ExitOnFailure(hr, "Failed to get @Persisted.");
 

@@ -63,8 +63,6 @@ typedef struct _BURN_RELATED_BUNDLE
     LPWSTR sczTag;
 
     BURN_PACKAGE package;
-
-    BURN_VARIABLES* pVariables;
 } BURN_RELATED_BUNDLE;
 
 typedef struct _BURN_RELATED_BUNDLES
@@ -187,7 +185,8 @@ HRESULT RegistrationSessionBegin(
     __in DWORD64 qwEstimatedSize
     );
 HRESULT RegistrationSessionResume(
-    __in BURN_REGISTRATION* pRegistration
+    __in BURN_REGISTRATION* pRegistration,
+    __in BURN_VARIABLES* pVariables
     );
 HRESULT RegistrationSessionEnd(
     __in BURN_REGISTRATION* pRegistration,
