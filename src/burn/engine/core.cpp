@@ -10,6 +10,7 @@ struct BURN_CACHE_THREAD_CONTEXT
     BURN_ENGINE_STATE* pEngineState;
     DWORD* pcOverallProgressTicks;
     BOOL* pfRollback;
+    APPLY_SYNCHRONIZE_CACHE_THREAD* pSychronizeCache;
 };
 
 
@@ -47,7 +48,13 @@ static DWORD WINAPI CacheThreadProc(
     );
 static HRESULT WaitForCacheThread(
     __in HANDLE hCacheThread
+);
+#ifdef CACHE_THREAD_ALWAYS_CLEANUP
+static HRESULT WaitForCacheThread(
+    __in HANDLE hCacheThread,
+    __in HANDLE hEventCacheComplete
     );
+#endif
 static void LogPackages(
     __in_opt const BURN_PACKAGE* pUpgradeBundlePackage,
     __in_opt const BURN_PACKAGE* pForwardCompatibleBundlePackage,
@@ -552,6 +559,7 @@ extern "C" HRESULT CoreApply(
     BOOL fSuspend = FALSE;
     BOOTSTRAPPER_APPLY_RESTART restart = BOOTSTRAPPER_APPLY_RESTART_NONE;
     BURN_CACHE_THREAD_CONTEXT cacheThreadContext = { };
+    APPLY_SYNCHRONIZE_CACHE_THREAD synchronizeCache = {};
     DWORD dwPhaseCount = 0;
 
     LogId(REPORT_STANDARD, MSG_APPLY_BEGIN);
@@ -634,6 +642,15 @@ extern "C" HRESULT CoreApply(
     // Cache.
     if (pEngineState->plan.cCacheActions)
     {
+        if (pEngineState->fParallelCacheAndExecute)
+        {
+            synchronizeCache.hEventCacheComplete = ::CreateEventW(NULL, TRUE, FALSE, NULL);
+            synchronizeCache.hEventApplyExecuteComplete = ::CreateEventW(NULL, TRUE, FALSE, NULL);
+            synchronizeCache.hrCacheExecuteRollback = S_OK;
+
+            cacheThreadContext.pSychronizeCache = &synchronizeCache;
+        }
+
         // Launch the cache thread.
         cacheThreadContext.pEngineState = pEngineState;
         cacheThreadContext.pcOverallProgressTicks = &cOverallProgressTicks;
@@ -655,7 +672,7 @@ extern "C" HRESULT CoreApply(
     // Execute.
     if (pEngineState->plan.cExecuteActions)
     {
-        hr = ApplyExecute(pEngineState, hCacheThread, &cOverallProgressTicks, &fKeepRegistration, &fRollback, &fSuspend, &restart);
+        hr = ApplyExecute(pEngineState, hCacheThread, &synchronizeCache, &cOverallProgressTicks, &fKeepRegistration, &fRollback, &fSuspend, &restart);
         UserExperienceExecutePhaseComplete(&pEngineState->userExperience, hr); // signal that execute completed.
     }
 
@@ -709,6 +726,8 @@ LExit:
     }
 
     ReleaseHandle(hCacheThread);
+    ReleaseHandle(synchronizeCache.hEventCacheComplete);
+    ReleaseHandle(synchronizeCache.hEventApplyExecuteComplete);
 
     nResult = pEngineState->userExperience.pUserExperience->OnApplyComplete(hr, restart);
     if (IDRESTART == nResult)
@@ -1558,7 +1577,7 @@ static DWORD WINAPI CacheThreadProc(
     fComInitialized = TRUE;
 
     // cache packages
-    hr = ApplyCache(pEngineState->section.hSourceEngineFile, &pEngineState->userExperience, &pEngineState->variables, &pEngineState->plan, pEngineState->companionConnection.hCachePipe, pcOverallProgressTicks, pfRollback);
+    hr = ApplyCache(pEngineState->section.hSourceEngineFile, &pEngineState->userExperience, &pEngineState->variables, &pEngineState->plan, pEngineState->companionConnection.hCachePipe,pContext->pSychronizeCache, pEngineState->fParallelCacheAndExecute, pcOverallProgressTicks, pfRollback);
 
 LExit:
     UserExperienceExecutePhaseComplete(&pEngineState->userExperience, hr); // signal that cache completed.
@@ -1590,6 +1609,37 @@ static HRESULT WaitForCacheThread(
 LExit:
     return hr;
 }
+
+#ifdef CACHE_THREAD_ALWAYS_CLEANUP
+static HRESULT WaitForCacheThread(
+    __in HANDLE hCacheThread,
+    __in HANDLE hEventCacheComplete
+    )
+{
+    HRESULT hr = S_OK;
+    HANDLE rghSyncOpt[2];
+    
+    rghSyncOpt[0] = hCacheThread;
+    rghSyncOpt[1] = hEventCacheComplete;
+
+    switch (::WaitForMultipleObjects(2, rghSyncOpt, FALSE, INFINITE))
+    {
+        case WAIT_OBJECT_0:
+            if (!::GetExitCodeThread(hCacheThread, (DWORD*)&hr))
+            {
+                ExitWithLastError(hr, "Failed to get cache thread exit code.");
+            }
+            break;
+        case WAIT_OBJECT_0+1:
+            break;
+        default:
+            ExitWithLastError(hr, "Failed to wait for cache thread to terminate.");
+    }
+
+LExit:
+    return hr;
+}
+#endif
 
 static void LogPackages(
     __in_opt const BURN_PACKAGE* pUpgradeBundlePackage,

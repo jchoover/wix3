@@ -420,6 +420,8 @@ extern "C" HRESULT ApplyCache(
     __in BURN_VARIABLES* pVariables,
     __in BURN_PLAN* pPlan,
     __in HANDLE hPipe,
+    __in APPLY_SYNCHRONIZE_CACHE_THREAD* pSynchronizeCache,
+    __in BOOL fParallelCacheAndExecute,
     __inout DWORD* pcOverallProgressTicks,
     __out BOOL* pfRollback
     )
@@ -686,6 +688,25 @@ extern "C" HRESULT ApplyCache(
         }
     } while (fRetry);
 
+    // Should we wait for ApplyExecute to finish, and conditionally roll back the cache plan if ApplyExecute failed?
+    if (SUCCEEDED(hr) && (fParallelCacheAndExecute))
+    {
+        if (!::SetEvent(pSynchronizeCache->hEventCacheComplete))
+        {
+            ExitWithLastError(hr, "Failed to set cache complete event.");
+        }
+
+        if (WAIT_OBJECT_0 != ::WaitForSingleObject(pSynchronizeCache->hEventApplyExecuteComplete, INFINITE))
+        {
+            ExitWithLastError(hr, "Failed to wait for apply exeucte complete event.");
+        }
+
+        if (FAILED(pSynchronizeCache->hrCacheExecuteRollback))
+        {
+            hr = pSynchronizeCache->hrCacheExecuteRollback;
+        }
+    }
+
 LExit:
     Assert(NULL == pStartedPackage);
     Assert(BURN_PLAN_INVALID_ACTION_INDEX == iPackageStartAction);
@@ -712,6 +733,7 @@ LExit:
 extern "C" HRESULT ApplyExecute(
     __in BURN_ENGINE_STATE* pEngineState,
     __in_opt HANDLE hCacheThread,
+    __in APPLY_SYNCHRONIZE_CACHE_THREAD* pSynchronizeCache,
     __inout DWORD* pcOverallProgressTicks,
     __out BOOL* pfKeepRegistration,
     __out BOOL* pfRollback,
@@ -792,6 +814,51 @@ extern "C" HRESULT ApplyExecute(
     }
 
 LExit:
+    if (FAILED(hr) && !*pfRollback)
+    {
+        // Origionally I had additional conditions below, but my current thought is the plan should win. If we are doing a
+        // Repair/Uninstall, then the CacheRollback shouldn't have any of the existing cached packages in the plan, as they
+        // should already be on the machine.
+        // && !pEngineState->registration.fInstalled &&  (BOOTSTRAPPER_ACTION_INSTALL == pEngineState->plan.action)
+        if (pEngineState->fParallelCacheAndExecute)
+        {
+            pSynchronizeCache->hrCacheExecuteRollback = hr;
+            if (!::SetEvent(pSynchronizeCache->hEventApplyExecuteComplete))
+            {
+                // ExitWithLastError(hr, "Failed to set apply execute complete event.");
+                { DWORD Dutil_er = ::GetLastError(); HRESULT x = HRESULT_FROM_WIN32(Dutil_er); if (!FAILED(x)) { x = E_FAIL; } Dutil_RootFailure(__FILE__, __LINE__, x); ExitTrace(x, "Failed to set apply execute complete event."); }
+            }
+        }
+        else
+        {
+            // Scan to find the last checkpoint.
+            dwCheckpoint = 0;
+            for (DWORD i = pEngineState->plan.cRollbackCacheActions - 1; i >= 0; --i)
+            {
+                BURN_CACHE_ACTION* pRollbackCacheAction = &pEngineState->plan.rgRollbackCacheActions[i];
+
+                if (BURN_CACHE_ACTION_TYPE_CHECKPOINT == pRollbackCacheAction->type)
+                {
+                    dwCheckpoint = i;
+                    break;
+                }
+            }
+
+            DoRollbackCache(&pEngineState->userExperience, &pEngineState->plan, pEngineState->companionConnection.hPipe, dwCheckpoint);
+        }
+    }
+    else
+    {
+        if (pEngineState->fParallelCacheAndExecute)
+        {
+            if (!::SetEvent(pSynchronizeCache->hEventApplyExecuteComplete))
+            {
+                // ExitWithLastError(hr, "Failed to set apply execute complete event.");
+                { DWORD Dutil_er = ::GetLastError(); HRESULT x = HRESULT_FROM_WIN32(Dutil_er); if (!FAILED(x)) { x = E_FAIL; } Dutil_RootFailure(__FILE__, __LINE__, x); ExitTrace(x, "Failed to set apply execute complete event."); }
+            }
+        }
+    }
+
     // Send execute complete to BA.
     pEngineState->userExperience.pUserExperience->OnExecuteComplete(hr);
 

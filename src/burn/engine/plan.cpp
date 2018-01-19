@@ -516,6 +516,18 @@ extern "C" HRESULT PlanPackages(
         }
     }
 
+    // Insert a trailing checkpoint to the end of the rollback cache plan.
+    if (!fBundleInstalled && (BOOTSTRAPPER_ACTION_INSTALL == pPlan->action))
+    {
+        BURN_CACHE_ACTION* pCacheAction = NULL;
+        DWORD dwCheckpoint = GetNextCheckpointId();
+        hr = AppendRollbackCacheAction(pPlan, &pCacheAction);
+        ExitOnFailure(hr, "Failed to append rollback cache action.");
+
+        pCacheAction->type = BURN_CACHE_ACTION_TYPE_CHECKPOINT;
+        pCacheAction->checkpoint.dwId = dwCheckpoint;
+    }
+
     // Insert the "keep registration" and "remove registration" actions in the plan when installing the first time and anytime we are uninstalling respectively.
     if (!fBundleInstalled && (BOOTSTRAPPER_ACTION_INSTALL == pPlan->action || BOOTSTRAPPER_ACTION_MODIFY == pPlan->action || BOOTSTRAPPER_ACTION_REPAIR == pPlan->action))
     {

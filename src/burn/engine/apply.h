@@ -46,6 +46,12 @@ typedef struct _GENERIC_EXECUTE_MESSAGE
     };
 } GENERIC_EXECUTE_MESSAGE;
 
+typedef struct _APPLY_SYNCHRONIZE_CACHE_THREAD
+{
+    HANDLE hEventCacheComplete;
+    HANDLE hEventApplyExecuteComplete;
+    HRESULT hrCacheExecuteRollback;
+} APPLY_SYNCHRONIZE_CACHE_THREAD;
 
 typedef int (*PFN_GENERICMESSAGEHANDLER)(
     __in GENERIC_EXECUTE_MESSAGE* pMessage,
@@ -82,12 +88,15 @@ HRESULT ApplyCache(
     __in BURN_VARIABLES* pVariables,
     __in BURN_PLAN* pPlan,
     __in HANDLE hPipe,
+    __in APPLY_SYNCHRONIZE_CACHE_THREAD* pSynchronizeCache,
+    __in BOOL fParallelCacheAndExecute,
     __inout DWORD* pcOverallProgressTicks,
     __out BOOL* pfRollback
     );
 HRESULT ApplyExecute(
     __in BURN_ENGINE_STATE* pEngineState,
     __in_opt HANDLE hCacheThread,
+    __in APPLY_SYNCHRONIZE_CACHE_THREAD* pSynchronizeCache,
     __inout DWORD* pcOverallProgressTicks,
     __out BOOL* pfKeepRegistration,
     __out BOOL* pfRollback,
