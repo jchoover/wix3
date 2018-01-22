@@ -814,7 +814,8 @@ extern "C" HRESULT ApplyExecute(
     }
 
 LExit:
-    if (FAILED(hr) && !*pfRollback)
+    // Need to detect the Default rollback boundary...
+    if (FAILED(hr) && !pEngineState->fDisableRollback)
     {
         // Origionally I had additional conditions below, but my current thought is the plan should win. If we are doing a
         // Repair/Uninstall, then the CacheRollback shouldn't have any of the existing cached packages in the plan, as they
@@ -826,6 +827,7 @@ LExit:
             if (!::SetEvent(pSynchronizeCache->hEventApplyExecuteComplete))
             {
                 // ExitWithLastError(hr, "Failed to set apply execute complete event.");
+                // Can't use the macro as we are past LExit.
                 { DWORD Dutil_er = ::GetLastError(); HRESULT x = HRESULT_FROM_WIN32(Dutil_er); if (!FAILED(x)) { x = E_FAIL; } Dutil_RootFailure(__FILE__, __LINE__, x); ExitTrace(x, "Failed to set apply execute complete event."); }
             }
         }
@@ -839,7 +841,7 @@ LExit:
 
                 if (BURN_CACHE_ACTION_TYPE_CHECKPOINT == pRollbackCacheAction->type)
                 {
-                    dwCheckpoint = i;
+                    dwCheckpoint = pRollbackCacheAction->checkpoint.dwId;
                     break;
                 }
             }
@@ -854,6 +856,7 @@ LExit:
             if (!::SetEvent(pSynchronizeCache->hEventApplyExecuteComplete))
             {
                 // ExitWithLastError(hr, "Failed to set apply execute complete event.");
+                // Can't use the macro as we are past LExit.
                 { DWORD Dutil_er = ::GetLastError(); HRESULT x = HRESULT_FROM_WIN32(Dutil_er); if (!FAILED(x)) { x = E_FAIL; } Dutil_RootFailure(__FILE__, __LINE__, x); ExitTrace(x, "Failed to set apply execute complete event."); }
             }
         }
@@ -1613,6 +1616,7 @@ static void DoRollbackCache(
         if (BURN_CACHE_ACTION_TYPE_CHECKPOINT == pRollbackCacheAction->type && pRollbackCacheAction->checkpoint.dwId == dwCheckpoint)
         {
             iCheckpoint = i;
+            LogLine(REPORT_DEBUG, "DoRollbackCache, checkpoint %d found.", dwCheckpoint);
             break;
         }
     }
@@ -1631,6 +1635,7 @@ static void DoRollbackCache(
                 break;
 
             case BURN_CACHE_ACTION_TYPE_ROLLBACK_PACKAGE:
+                LogLine(REPORT_DEBUG, "Attempting to clean package %ls", pRollbackCacheAction->rollbackPackage.pPackage->sczId);
                 hr = CleanPackage(hPipe, pRollbackCacheAction->rollbackPackage.pPackage);
                 break;
 

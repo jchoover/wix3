@@ -548,7 +548,7 @@ extern "C" HRESULT PlanPackages(
 
         pRollbackBoundary = NULL;
     }
-    else
+
     {
         BURN_CACHE_ACTION* pCacheAction = NULL;
         DWORD dwCheckpoint = GetNextCheckpointId();
