@@ -49,12 +49,6 @@ static DWORD WINAPI CacheThreadProc(
 static HRESULT WaitForCacheThread(
     __in HANDLE hCacheThread
 );
-#ifdef CACHE_THREAD_ALWAYS_CLEANUP
-static HRESULT WaitForCacheThread(
-    __in HANDLE hCacheThread,
-    __in HANDLE hEventCacheComplete
-    );
-#endif
 static void LogPackages(
     __in_opt const BURN_PACKAGE* pUpgradeBundlePackage,
     __in_opt const BURN_PACKAGE* pForwardCompatibleBundlePackage,
@@ -1609,37 +1603,6 @@ static HRESULT WaitForCacheThread(
 LExit:
     return hr;
 }
-
-#ifdef CACHE_THREAD_ALWAYS_CLEANUP
-static HRESULT WaitForCacheThread(
-    __in HANDLE hCacheThread,
-    __in HANDLE hEventCacheComplete
-    )
-{
-    HRESULT hr = S_OK;
-    HANDLE rghSyncOpt[2];
-    
-    rghSyncOpt[0] = hCacheThread;
-    rghSyncOpt[1] = hEventCacheComplete;
-
-    switch (::WaitForMultipleObjects(2, rghSyncOpt, FALSE, INFINITE))
-    {
-        case WAIT_OBJECT_0:
-            if (!::GetExitCodeThread(hCacheThread, (DWORD*)&hr))
-            {
-                ExitWithLastError(hr, "Failed to get cache thread exit code.");
-            }
-            break;
-        case WAIT_OBJECT_0+1:
-            break;
-        default:
-            ExitWithLastError(hr, "Failed to wait for cache thread to terminate.");
-    }
-
-LExit:
-    return hr;
-}
-#endif
 
 static void LogPackages(
     __in_opt const BURN_PACKAGE* pUpgradeBundlePackage,
